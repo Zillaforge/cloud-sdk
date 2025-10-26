@@ -31,7 +31,20 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+The feature plan MUST satisfy all applicable Cloud SDK Constitution principles:
+
+- TDD mandatory: tests are written first and initially fail; include unit tests and
+  contract tests derived from the corresponding Swagger/OpenAPI.
+- Public API shape: expose idiomatic Go packages and a Client with methods per API;
+  do not expose raw HTTP to callers; all public methods accept `context.Context`
+  and return typed responses and wrapped errors.
+- Dependencies: prefer standard library; any external dependency MUST be justified
+  here with clear value (security, maintainability, or functionality).
+- Versioning: document whether the change is MAJOR/MINOR/PATCH and include a
+  migration note for any breaking change.
+- Observability: provide hooks for logging/metrics without forcing a vendor.
+- Security: do not log secrets; TLS verification enabled by default; configuration
+  through env vars or explicit constructors.
 
 ## Project Structure
 
