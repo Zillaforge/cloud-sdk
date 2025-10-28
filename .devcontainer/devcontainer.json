@@ -44,21 +44,21 @@
 					"servers": {
 						// if you want to run MCP server in Python, python3 and uv are required.
 						// set INSTALL_PYTHON to true in devcontainer.json
-						"timezone-uvx": {
-							"command": "uvx",
-							"args": [
-								"mcp-server-time"
-							]
-						},
+						// "timezone-uvx": {
+						// 	"command": "uvx",
+						// 	"args": [
+						// 		"mcp-server-time"
+						// 	]
+						// },
 						// if you want to run MCP server in Node.js, node.js and npm are required.
 						// set INSTALL_NODE to true in devcontainer.json
-						"timezone-npx": {
-							"command": "npx",
-							"args": [
-								"-y",
-								"@cicatriz/timezone-toolkit"
-							]
-						}
+						// "timezone-npx": {
+						// 	"command": "npx",
+						// 	"args": [
+						// 		"-y",
+						// 		"@cicatriz/timezone-toolkit"
+						// 	]
+						// }
 					}
 				}
 			}

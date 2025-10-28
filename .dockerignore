@@ -1,0 +1,23 @@
+# Git
+.git/
+
+# Documentation
+*.md
+specs/
+
+# IDE
+.vscode/
+.idea/
+
+# Environment
+.env*
+*.log*
+
+# Test coverage
+coverage/
+*.prof
+
+# Build artifacts
+dist/
+build/
+bin/

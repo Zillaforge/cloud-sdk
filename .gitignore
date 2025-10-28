@@ -1,0 +1,33 @@
+# Go
+*.exe
+*.test
+vendor/
+*.out
+
+# Specs (not part of SDK code)
+# specs/
+
+# IDE
+.DS_Store
+Thumbs.db
+*.tmp
+*.swp
+.vscode/
+.idea/
+
+# Environment
+.env*
+*.log
+
+# Build artifacts
+dist/
+build/
+bin/
+
+# Test coverage
+coverage.out
+coverage.html
+*.prof
+
+# Dependencies
+go.sum
