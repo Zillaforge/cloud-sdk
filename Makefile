@@ -49,7 +49,7 @@ lint:
 # Run tests (without race detector for Alpine compatibility)
 test:
 	@echo "Running tests..."
-	@go test -v -coverprofile=coverage.out $(PACKAGES)
+	@go test -cover ./...
 
 # Run tests with race detector (requires CGO)
 test-race:
@@ -64,6 +64,7 @@ test-race:
 
 # Run tests with coverage report
 coverage: test
+	@go test -v -coverprofile=coverage.out $(PACKAGES)
 	@go tool cover -html=coverage.out -o coverage.html
 	@echo "Coverage report generated: coverage.html"
 

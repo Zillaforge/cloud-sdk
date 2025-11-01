@@ -1,0 +1,20 @@
+@PROTOCOL = {{$dotenv API_PROTOCOL}}
+@HOST = {{$dotenv API_HOST}}
+@PROJECT = {{$dotenv PROJECT_ID}}
+@TOKEN = {{$dotenv API_TOKEN}}
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/vps/api/v1/project/{{PROJECT}}
+
+### List Flavor
+# @name FlavorList
+GET {{BASE_URL}}/flavors HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+@flavorId={{FlavorList.response.body.flavors[0].id}}
+
+### Get Flavor
+# @name FlavorGet
+GET {{BASE_URL}}/flavors/{{flavorId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
