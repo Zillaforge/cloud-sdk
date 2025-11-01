@@ -24,7 +24,9 @@ RUN go install github.com/ramya-rao-a/go-outline@latest         && \
     go install github.com/haya14busa/goplay/cmd/goplay@latest   && \
     go install github.com/go-delve/delve/cmd/dlv@latest         && \
     go install honnef.co/go/tools/cmd/staticcheck@latest        && \
-    go install golang.org/x/tools/gopls@latest
+    go install golang.org/x/tools/gopls@latest                  && \
+    go install golang.org/x/tools/cmd/goimports@latest          && \
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
 
 ARG GO_ARCH
 RUN if [ "${GO_ARCH}" == "alpine" ]; then \
