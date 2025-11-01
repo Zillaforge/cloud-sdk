@@ -1,0 +1,64 @@
+@PROTOCOL = {{$dotenv API_PROTOCOL}}
+@HOST = {{$dotenv API_HOST}}
+@PROJECT = {{$dotenv PROJECT_ID}}
+@TOKEN = {{$dotenv API_TOKEN}}
+@SERVICE = {{$dotenv SERVICE}}
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+
+
+
+
+### Create Network
+# @name NetworkCreate
+POST {{BASE_URL}}/networks/ HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name":"test-network",
+    "cidr":"192.168.123.0/24",
+    "gateway":"192.168.123.1"
+}
+
+@testNetworkId={{NetworkCreate.response.body.$.id}}
+
+
+### List Network
+# @name NetworkList
+GET {{BASE_URL}}/networks/ HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@defaultNetworkId={{NetworkList.response.body.$.networks[?(@.name == 'default')].id}}
+
+### Get Specific Network
+# @name NetworkGet
+GET {{BASE_URL}}/networks/{{testNetworkId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### List Ports from specific Network
+# @name PortList
+GET {{BASE_URL}}/networks/{{testNetworkId}}/ports HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+### Update
+# @name NetworkUpdate
+PUT {{BASE_URL}}/networks/{{testNetworkId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "new-network",
+    "description": "new network"
+}
+
+### Delete
+# @name NetworkDelete
+DELETE {{BASE_URL}}/networks/{{testNetworkId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+

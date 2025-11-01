@@ -2,7 +2,8 @@
 @HOST = {{$dotenv API_HOST}}
 @PROJECT = {{$dotenv PROJECT_ID}}
 @TOKEN = {{$dotenv API_TOKEN}}
-@BASE_URL = {{PROTOCOL}}://{{HOST}}/vps/api/v1/project/{{PROJECT}}
+@SERVICE = {{$dotenv SERVICE}}
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
 
 ### List Flavor
 # @name FlavorList
