@@ -1,0 +1,126 @@
+openapi: 3.0.0
+info:
+  title: VPS Flavors Client API
+  version: 1.0.0
+  description: Client interface for VPS Flavors API operations
+
+paths:
+  /api/v1/project/{projectId}/flavors:
+    get:
+      summary: List flavors with filtering
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          schema:
+            type: string
+        - name: public
+          in: query
+          schema:
+            type: boolean
+        - name: tag
+          in: query
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+          description: Multiple tags allowed
+        - name: resize_server_id
+          in: query
+          schema:
+            type: string
+          description: Flavors available for server resize
+      responses:
+        '200':
+          description: List of flavors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FlavorListResponse'
+
+  /api/v1/project/{projectId}/flavors/{flavorId}:
+    get:
+      summary: Get specific flavor
+      parameters:
+        - name: projectId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: flavorId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Flavor details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Flavor'
+
+components:
+  schemas:
+    Flavor:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        vcpu:
+          type: integer
+        memory:
+          type: integer
+        disk:
+          type: integer
+        gpu:
+          $ref: '#/components/schemas/GPUInfo'
+        public:
+          type: boolean
+        tags:
+          type: array
+          items:
+            type: string
+        project_ids:
+          type: array
+          items:
+            type: string
+        az:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type: string
+          format: date-time
+
+    GPUInfo:
+      type: object
+      properties:
+        count:
+          type: integer
+        is_vgpu:
+          type: boolean
+        model:
+          type: string
+
+    FlavorListResponse:
+      type: object
+      properties:
+        flavors:
+          type: array
+          items:
+            $ref: '#/components/schemas/Flavor'

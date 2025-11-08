@@ -41,8 +41,12 @@ func (c *Client) List(ctx context.Context, opts *flavors.ListFlavorsOptions) (*f
 		if opts.Public != nil {
 			query.Set("public", strconv.FormatBool(*opts.Public))
 		}
-		if opts.Tag != "" {
-			query.Set("tag", opts.Tag)
+		// Support multiple tags - add each tag as a separate query parameter
+		for _, tag := range opts.Tags {
+			query.Add("tag", tag)
+		}
+		if opts.ResizeServerID != "" {
+			query.Set("resize_server_id", opts.ResizeServerID)
 		}
 	}
 

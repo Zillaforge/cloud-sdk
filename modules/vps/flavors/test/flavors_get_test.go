@@ -17,8 +17,8 @@ func TestFlavorsGet_Success(t *testing.T) {
 		ID:          "flav-123",
 		Name:        "large",
 		Description: "Large compute instance",
-		VCPUs:       8,
-		RAM:         16384,
+		VCPU:        8,
+		Memory:      16384,
 		Disk:        80,
 		Public:      true,
 		Tags:        []string{"compute", "balanced"},
@@ -57,11 +57,11 @@ func TestFlavorsGet_Success(t *testing.T) {
 	if flavor.Name != mockFlavor.Name {
 		t.Errorf("expected flavor name %s, got %s", mockFlavor.Name, flavor.Name)
 	}
-	if flavor.VCPUs != mockFlavor.VCPUs {
-		t.Errorf("expected %d VCPUs, got %d", mockFlavor.VCPUs, flavor.VCPUs)
+	if flavor.VCPU != mockFlavor.VCPU {
+		t.Errorf("expected %d VCPU, got %d", mockFlavor.VCPU, flavor.VCPU)
 	}
-	if flavor.RAM != mockFlavor.RAM {
-		t.Errorf("expected %d RAM, got %d", mockFlavor.RAM, flavor.RAM)
+	if flavor.Memory != mockFlavor.Memory {
+		t.Errorf("expected %d Memory, got %d", mockFlavor.Memory, flavor.Memory)
 	}
 	if flavor.Disk != mockFlavor.Disk {
 		t.Errorf("expected %d Disk, got %d", mockFlavor.Disk, flavor.Disk)

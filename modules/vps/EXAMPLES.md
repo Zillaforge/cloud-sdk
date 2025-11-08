@@ -945,7 +945,7 @@ func listFlavors(ctx context.Context, vps *vps.Client) {
     fmt.Printf("Available Flavors: %d\n", len(flavors.Flavors))
     for _, flavor := range flavors.Flavors {
         fmt.Printf("  - %s: %d vCPUs, %dMB RAM, %dGB disk\n",
-            flavor.Name, flavor.VCPUs, flavor.RAM, flavor.Disk)
+            flavor.Name, flavor.VCPU, flavor.Memory, flavor.Disk)
     }
 }
 ```
@@ -968,9 +968,9 @@ func findFlavor(ctx context.Context, vps *vps.Client, minVCPUs, minRAM int) *fla
     }
     
     for _, flavor := range allFlavors.Flavors {
-        if flavor.VCPUs >= minVCPUs && flavor.RAM >= minRAM {
+        if flavor.VCPU >= minVCPUs && flavor.Memory >= minRAM {
             fmt.Printf("Found suitable flavor: %s (%d vCPUs, %dMB RAM)\n",
-                flavor.Name, flavor.VCPUs, flavor.RAM)
+                flavor.Name, flavor.VCPU, flavor.Memory)
             return &flavor
         }
     }
@@ -1049,8 +1049,8 @@ func checkCapacity(ctx context.Context, vps *vps.Client, flavorID string) bool {
     
     // Check if we have capacity
     hasVMs := quotas.VMs.Used < quotas.VMs.Limit
-    hasVCPUs := (quotas.VCPUs.Used + flavor.VCPUs) <= quotas.VCPUs.Limit
-    hasRAM := (quotas.RAM.Used + flavor.RAM) <= quotas.RAM.Limit
+    hasVCPUs := (quotas.VCPUs.Used + flavor.VCPU) <= quotas.VCPUs.Limit
+    hasRAM := (quotas.RAM.Used + flavor.Memory) <= quotas.RAM.Limit
     
     canCreate := hasVMs && hasVCPUs && hasRAM
     
@@ -1061,11 +1061,11 @@ func checkCapacity(ctx context.Context, vps *vps.Client, flavorID string) bool {
         }
         if !hasVCPUs {
             fmt.Printf("  vCPU limit would be exceeded: %d+%d > %d\n",
-                quotas.VCPUs.Used, flavor.VCPUs, quotas.VCPUs.Limit)
+                quotas.VCPUs.Used, flavor.VCPU, quotas.VCPUs.Limit)
         }
         if !hasRAM {
             fmt.Printf("  RAM limit would be exceeded: %d+%d > %d\n",
-                quotas.RAM.Used, flavor.RAM, quotas.RAM.Limit)
+                quotas.RAM.Used, flavor.Memory, quotas.RAM.Limit)
         }
     }
     

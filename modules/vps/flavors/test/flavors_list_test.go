@@ -27,8 +27,8 @@ func TestFlavorsList_Success(t *testing.T) {
 					ID:          "flav-1",
 					Name:        "small",
 					Description: "Small instance",
-					VCPUs:       2,
-					RAM:         4096,
+					VCPU:        2,
+					Memory:      4096,
 					Disk:        20,
 					Public:      true,
 					Tags:        []string{"general"},
@@ -37,8 +37,8 @@ func TestFlavorsList_Success(t *testing.T) {
 					ID:          "flav-2",
 					Name:        "medium",
 					Description: "Medium instance",
-					VCPUs:       4,
-					RAM:         8192,
+					VCPU:        4,
+					Memory:      8192,
 					Disk:        40,
 					Public:      true,
 					Tags:        []string{"general", "balanced"},
@@ -54,8 +54,8 @@ func TestFlavorsList_Success(t *testing.T) {
 					ID:          "flav-1",
 					Name:        "small",
 					Description: "Small instance",
-					VCPUs:       2,
-					RAM:         4096,
+					VCPU:        2,
+					Memory:      4096,
 					Disk:        20,
 					Public:      true,
 				},
@@ -72,8 +72,8 @@ func TestFlavorsList_Success(t *testing.T) {
 				{
 					ID:     "flav-1",
 					Name:   "public-flavor",
-					VCPUs:  2,
-					RAM:    4096,
+					VCPU:   2,
+					Memory: 4096,
 					Disk:   20,
 					Public: true,
 				},
@@ -82,13 +82,13 @@ func TestFlavorsList_Success(t *testing.T) {
 		},
 		{
 			name: "filter by tag",
-			opts: &flavors.ListFlavorsOptions{Tag: "gpu"},
+			opts: &flavors.ListFlavorsOptions{Tags: []string{"gpu"}},
 			mockFlavors: []*flavors.Flavor{
 				{
 					ID:     "flav-gpu",
 					Name:   "gpu-large",
-					VCPUs:  8,
-					RAM:    16384,
+					VCPU:   8,
+					Memory: 16384,
 					Disk:   100,
 					Public: true,
 					Tags:   []string{"gpu", "compute"},
@@ -124,7 +124,7 @@ func TestFlavorsList_Success(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				response := &flavors.FlavorListResponse{Items: tt.mockFlavors}
+				response := &flavors.FlavorListResponse{Flavors: tt.mockFlavors}
 				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer server.Close()
@@ -142,8 +142,8 @@ func TestFlavorsList_Success(t *testing.T) {
 			if resp == nil {
 				t.Fatal("expected response, got nil")
 			}
-			if len(resp.Items) != len(tt.mockFlavors) {
-				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp.Items))
+			if len(resp.Flavors) != len(tt.mockFlavors) {
+				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp.Flavors))
 			}
 		})
 	}
