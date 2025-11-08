@@ -248,20 +248,24 @@ func TestListNetworksOptions(t *testing.T) {
 func TestNetworkPort(t *testing.T) {
 	port := &networks.NetworkPort{
 		ID:        "port-123",
-		NetworkID: "net-123",
-		FixedIPs:  []string{"10.0.1.10"},
-		MACAddr:   "fa:16:3e:11:22:33",
-		ServerID:  "srv-123",
+		Addresses: []string{"10.0.1.10"},
+		Server: &networks.ServerSummary{
+			ID:        "srv-123",
+			Name:      "web",
+			Status:    "ACTIVE",
+			ProjectID: "proj-123",
+			UserID:    "user-123",
+		},
 	}
 
 	if port.ID != "port-123" {
 		t.Errorf("expected port ID port-123, got %s", port.ID)
 	}
-	if port.NetworkID != "net-123" {
-		t.Errorf("expected network ID net-123, got %s", port.NetworkID)
+	if len(port.Addresses) != 1 {
+		t.Errorf("expected 1 address, got %d", len(port.Addresses))
 	}
-	if len(port.FixedIPs) != 1 {
-		t.Errorf("expected 1 fixed IP, got %d", len(port.FixedIPs))
+	if port.Server == nil {
+		t.Fatal("expected non-nil server summary")
 	}
 }
 
@@ -273,8 +277,11 @@ func TestNetwork(t *testing.T) {
 		Description: "Test description",
 		CIDR:        "10.0.1.0/24",
 		ProjectID:   "proj-123",
+		Gateway:     "10.0.1.1",
+		Shared:      true,
+		Bonding:     false,
 		CreatedAt:   "2025-01-01T00:00:00Z",
-		UpdatedAt:   "2025-01-01T00:00:00Z",
+		UpdatedAt:   "2025-01-02T00:00:00Z",
 	}
 
 	if network.ID != "net-123" {
@@ -285,6 +292,12 @@ func TestNetwork(t *testing.T) {
 	}
 	if network.CIDR != "10.0.1.0/24" {
 		t.Errorf("expected CIDR 10.0.1.0/24, got %s", network.CIDR)
+	}
+	if network.Gateway != "10.0.1.1" {
+		t.Errorf("expected gateway 10.0.1.1, got %s", network.Gateway)
+	}
+	if !network.Shared {
+		t.Error("expected shared flag true")
 	}
 }
 

@@ -12,15 +12,7 @@ import (
 
 // TestNetworksGet_Success verifies successful network retrieval
 func TestNetworksGet_Success(t *testing.T) {
-	mockResponse := map[string]interface{}{
-		"id":          "net-123",
-		"name":        "test-network",
-		"description": "Test network",
-		"cidr":        "10.0.0.0/24",
-		"project_id":  "proj-123",
-		"created_at":  "2025-01-01T00:00:00Z",
-		"updated_at":  "2025-01-01T00:00:00Z",
-	}
+	fixture := loadFixtureBytes(t, "network_full.json")
 
 	// Create mock HTTP server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -28,14 +20,14 @@ func TestNetworksGet_Success(t *testing.T) {
 		if r.Method != http.MethodGet {
 			t.Errorf("expected GET request, got %s", r.Method)
 		}
-		if r.URL.Path != "/vps/api/v1/project/proj-123/networks/net-123" {
+		if r.URL.Path != "/vps/api/v1/project/proj-123/networks/net-full-001" {
 			t.Errorf("unexpected path: %s", r.URL.Path)
 		}
 
 		// Send mock response
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(mockResponse)
+		_, _ = w.Write(fixture)
 	}))
 	defer server.Close()
 
@@ -46,7 +38,7 @@ func TestNetworksGet_Success(t *testing.T) {
 
 	// Execute test
 	ctx := context.Background()
-	resource, err := vpsClient.Networks().Get(ctx, "net-123")
+	resource, err := vpsClient.Networks().Get(ctx, "net-full-001")
 
 	// Verify results
 	if err != nil {
@@ -58,15 +50,25 @@ func TestNetworksGet_Success(t *testing.T) {
 	if resource.Network == nil {
 		t.Fatal("expected non-nil network")
 	}
-	if resource.Network.ID != "net-123" {
-		t.Errorf("expected ID 'net-123', got '%s'", resource.Network.ID)
-	}
-	if resource.Network.Name != "test-network" {
-		t.Errorf("expected name 'test-network', got '%s'", resource.Network.Name)
-	}
-	if resource.Network.CIDR != "10.0.0.0/24" {
-		t.Errorf("expected CIDR '10.0.0.0/24', got '%s'", resource.Network.CIDR)
-	}
+	assertStringField(t, resource.Network, "ID", "net-full-001")
+	assertStringField(t, resource.Network, "Name", "full-network")
+	assertStringField(t, resource.Network, "CIDR", "10.42.0.0/24")
+	assertStringField(t, resource.Network, "Gateway", "10.42.0.1")
+	assertStringSliceField(t, resource.Network, "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
+	assertBoolField(t, resource.Network, "Bonding", true)
+	assertBoolField(t, resource.Network, "Shared", true)
+
+	project := requirePointerStructField(t, resource.Network, "Project")
+	assertStringField(t, project.Interface(), "ID", "proj-001")
+	assertStringField(t, project.Interface(), "Name", "Tenant Alpha")
+
+	router := requirePointerStructField(t, resource.Network, "Router")
+	assertStringField(t, router.Interface(), "ID", "router-123")
+	assertStringSliceField(t, router.Interface(), "GWAddrs", []string{"192.0.2.1", "192.0.2.2"})
+
+	user := requirePointerStructField(t, resource.Network, "User")
+	assertStringField(t, user.Interface(), "ID", "user-123")
+	assertStringField(t, user.Interface(), "Name", "Alice Ops")
 
 	// Verify resource has Ports() accessor
 	if resource.Ports() == nil {

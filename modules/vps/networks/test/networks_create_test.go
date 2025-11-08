@@ -27,6 +27,8 @@ func TestNetworksCreate_Success(t *testing.T) {
 				Name:        "test-network",
 				Description: "Test network description",
 				CIDR:        "10.0.0.0/24",
+				Gateway:     "10.0.0.1",
+				RouterID:    "router-abc",
 			},
 			mockResponse: map[string]interface{}{
 				"id":          "net-123",
@@ -34,6 +36,8 @@ func TestNetworksCreate_Success(t *testing.T) {
 				"description": "Test network description",
 				"cidr":        "10.0.0.0/24",
 				"project_id":  "proj-123",
+				"gateway":     "10.0.0.1",
+				"router_id":   "router-abc",
 				"created_at":  "2025-01-01T00:00:00Z",
 				"updated_at":  "2025-01-01T00:00:00Z",
 			},
@@ -47,6 +51,12 @@ func TestNetworksCreate_Success(t *testing.T) {
 				if reqBody["cidr"] != "10.0.0.0/24" {
 					t.Errorf("expected CIDR '10.0.0.0/24', got '%v'", reqBody["cidr"])
 				}
+				if reqBody["gateway"] != "10.0.0.1" {
+					t.Errorf("expected gateway '10.0.0.1', got '%v'", reqBody["gateway"])
+				}
+				if reqBody["router_id"] != "router-abc" {
+					t.Errorf("expected router_id 'router-abc', got '%v'", reqBody["router_id"])
+				}
 			},
 			validateResult: func(t *testing.T, network *networks.Network) {
 				if network.ID != "net-123" {
@@ -57,6 +67,12 @@ func TestNetworksCreate_Success(t *testing.T) {
 				}
 				if network.CIDR != "10.0.0.0/24" {
 					t.Errorf("expected CIDR '10.0.0.0/24', got '%s'", network.CIDR)
+				}
+				if network.Gateway != "10.0.0.1" {
+					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Gateway)
+				}
+				if network.RouterID != "router-abc" {
+					t.Errorf("expected router_id 'router-abc', got '%s'", network.RouterID)
 				}
 			},
 		},
@@ -81,6 +97,12 @@ func TestNetworksCreate_Success(t *testing.T) {
 				if reqBody["description"] != nil && reqBody["description"] != "" {
 					t.Errorf("expected empty description, got '%v'", reqBody["description"])
 				}
+				if _, ok := reqBody["gateway"]; ok {
+					t.Errorf("unexpected gateway field present: %v", reqBody["gateway"])
+				}
+				if _, ok := reqBody["router_id"]; ok {
+					t.Errorf("unexpected router_id field present: %v", reqBody["router_id"])
+				}
 			},
 			validateResult: func(t *testing.T, network *networks.Network) {
 				if network.Name != "minimal-network" {
@@ -88,6 +110,12 @@ func TestNetworksCreate_Success(t *testing.T) {
 				}
 				if network.Description != "" {
 					t.Errorf("expected empty description, got '%s'", network.Description)
+				}
+				if network.Gateway != "" {
+					t.Errorf("expected empty gateway, got '%s'", network.Gateway)
+				}
+				if network.RouterID != "" {
+					t.Errorf("expected empty router_id, got '%s'", network.RouterID)
 				}
 			},
 		},

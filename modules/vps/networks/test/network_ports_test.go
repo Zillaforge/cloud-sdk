@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
@@ -22,21 +23,22 @@ func TestNetworkPorts_List_Success(t *testing.T) {
 	}{
 		{
 			name:      "list ports with results",
-			networkID: "net-123",
+			networkID: "net-full-001",
 			mockResponse: []map[string]interface{}{
 				{
-					"id":          "port-1",
-					"network_id":  "net-123",
-					"fixed_ips":   []string{"10.0.0.10"},
-					"mac_address": "fa:16:3e:11:22:33",
-					"server_id":   "srv-1",
+					"id":        "port-1",
+					"addresses": []string{"10.0.0.10"},
+					"server": map[string]interface{}{
+						"id":         "srv-1",
+						"name":       "frontend",
+						"status":     "ACTIVE",
+						"project_id": "proj-123",
+						"user_id":    "user-1",
+					},
 				},
 				{
-					"id":          "port-2",
-					"network_id":  "net-123",
-					"fixed_ips":   []string{"10.0.0.20", "10.0.0.21"},
-					"mac_address": "fa:16:3e:44:55:66",
-					"server_id":   "srv-2",
+					"id":        "port-2",
+					"addresses": []string{"10.0.0.20", "10.0.0.21"},
 				},
 			},
 			expectedCount: 2,
@@ -44,17 +46,20 @@ func TestNetworkPorts_List_Success(t *testing.T) {
 				if len(ports) != 2 {
 					t.Fatalf("expected 2 ports, got %d", len(ports))
 				}
-				if ports[0].ID != "port-1" {
-					t.Errorf("expected first port ID 'port-1', got '%s'", ports[0].ID)
+				assertStringField(t, ports[0], "ID", "port-1")
+				assertStringSliceField(t, ports[0], "Addresses", []string{"10.0.0.10"})
+				server := requirePointerStructField(t, ports[0], "Server")
+				assertStringField(t, server.Interface(), "ID", "srv-1")
+				assertStringField(t, server.Interface(), "Status", "ACTIVE")
+
+				assertStringField(t, ports[1], "ID", "port-2")
+				assertStringSliceField(t, ports[1], "Addresses", []string{"10.0.0.20", "10.0.0.21"})
+				serverField := requireStructField(t, ports[1], "Server")
+				if serverField.Kind() != reflect.Ptr {
+					t.Fatalf("expected server field to be pointer, got %s", serverField.Kind())
 				}
-				if ports[0].NetworkID != "net-123" {
-					t.Errorf("expected network ID 'net-123', got '%s'", ports[0].NetworkID)
-				}
-				if len(ports[0].FixedIPs) != 1 || ports[0].FixedIPs[0] != "10.0.0.10" {
-					t.Errorf("expected fixed IP '10.0.0.10', got %v", ports[0].FixedIPs)
-				}
-				if ports[1].ServerID != "srv-2" {
-					t.Errorf("expected server ID 'srv-2', got '%s'", ports[1].ServerID)
+				if !serverField.IsNil() {
+					t.Fatalf("expected nil server pointer for second port, got %#v", serverField.Interface())
 				}
 			},
 		},
@@ -74,10 +79,8 @@ func TestNetworkPorts_List_Success(t *testing.T) {
 			networkID: "net-789",
 			mockResponse: []map[string]interface{}{
 				{
-					"id":          "port-3",
-					"network_id":  "net-789",
-					"fixed_ips":   []string{"192.168.1.100"},
-					"mac_address": "fa:16:3e:77:88:99",
+					"id":        "port-3",
+					"addresses": []string{"192.168.1.100"},
 				},
 			},
 			expectedCount: 1,
@@ -85,8 +88,15 @@ func TestNetworkPorts_List_Success(t *testing.T) {
 				if len(ports) != 1 {
 					t.Fatalf("expected 1 port, got %d", len(ports))
 				}
-				if ports[0].ServerID != "" {
-					t.Errorf("expected empty server ID, got '%s'", ports[0].ServerID)
+				assertStringField(t, ports[0], "ID", "port-3")
+				assertStringSliceField(t, ports[0], "Addresses", []string{"192.168.1.100"})
+
+				serverField := requireStructField(t, ports[0], "Server")
+				if serverField.Kind() != reflect.Ptr {
+					t.Fatalf("expected server pointer, got %s", serverField.Kind())
+				}
+				if !serverField.IsNil() {
+					t.Fatalf("expected nil server pointer, got %#v", serverField.Interface())
 				}
 			},
 		},
@@ -102,12 +112,8 @@ func TestNetworkPorts_List_Success(t *testing.T) {
 				networkPath := "/vps/api/v1/project/proj-123/networks/" + tt.networkID
 				if r.URL.Path == networkPath && r.Method == http.MethodGet {
 					w.WriteHeader(http.StatusOK)
-					_ = json.NewEncoder(w).Encode(map[string]interface{}{
-						"id":         tt.networkID,
-						"name":       "test-network",
-						"cidr":       "10.0.0.0/24",
-						"project_id": "proj-123",
-					})
+					fixture := loadFixtureBytes(t, "network_full.json")
+					_, _ = w.Write(fixture)
 					return
 				}
 

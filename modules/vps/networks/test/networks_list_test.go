@@ -13,6 +13,19 @@ import (
 
 // TestNetworksList_Success verifies successful network listing
 func TestNetworksList_Success(t *testing.T) {
+	base := loadFixtureBytes(t, "network_full.json")
+
+	newNetworkPayload := func(overrides map[string]interface{}) map[string]interface{} {
+		var payload map[string]interface{}
+		if err := json.Unmarshal(base, &payload); err != nil {
+			t.Fatalf("failed to unmarshal base fixture: %v", err)
+		}
+		for k, v := range overrides {
+			payload[k] = v
+		}
+		return payload
+	}
+
 	tests := []struct {
 		name           string
 		mockResponse   interface{}
@@ -23,25 +36,18 @@ func TestNetworksList_Success(t *testing.T) {
 		{
 			name: "list all networks",
 			mockResponse: map[string]interface{}{
-				"networks": []map[string]interface{}{
-					{
-						"id":          "net-1",
-						"name":        "default-network",
-						"description": "Default network",
-						"cidr":        "10.0.0.0/24",
-						"project_id":  "proj-123",
-						"created_at":  "2025-01-01T00:00:00Z",
-						"updated_at":  "2025-01-01T00:00:00Z",
-					},
-					{
-						"id":          "net-2",
-						"name":        "private-network",
-						"description": "Private network",
-						"cidr":        "10.0.1.0/24",
-						"project_id":  "proj-123",
-						"created_at":  "2025-01-02T00:00:00Z",
-						"updated_at":  "2025-01-02T00:00:00Z",
-					},
+				"networks": []interface{}{
+					newNetworkPayload(map[string]interface{}{
+						"id":   "net-1",
+						"name": "default-network",
+						"cidr": "10.0.0.0/24",
+					}),
+					newNetworkPayload(map[string]interface{}{
+						"id":      "net-2",
+						"name":    "private-network",
+						"cidr":    "10.0.1.0/24",
+						"gateway": "10.0.1.1",
+					}),
 				},
 			},
 			expectedCount: 2,
@@ -50,18 +56,25 @@ func TestNetworksList_Success(t *testing.T) {
 				if len(resp.Networks) != 2 {
 					t.Errorf("expected 2 networks, got %d", len(resp.Networks))
 				}
-				if resp.Networks[0].Name != "default-network" {
-					t.Errorf("expected first network name 'default-network', got '%s'", resp.Networks[0].Name)
-				}
-				if resp.Networks[0].CIDR != "10.0.0.0/24" {
-					t.Errorf("expected first network CIDR '10.0.0.0/24', got '%s'", resp.Networks[0].CIDR)
-				}
+
+				assertStringField(t, resp.Networks[0], "ID", "net-1")
+				assertStringField(t, resp.Networks[0], "Gateway", "10.42.0.1")
+				assertStringSliceField(t, resp.Networks[0], "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
+
+				router := requirePointerStructField(t, resp.Networks[0], "Router")
+				assertStringField(t, router.Interface(), "ID", "router-123")
+
+				project := requirePointerStructField(t, resp.Networks[0], "Project")
+				assertStringField(t, project.Interface(), "ID", "proj-001")
+
+				assertStringField(t, resp.Networks[1], "ID", "net-2")
+				assertStringField(t, resp.Networks[1], "Gateway", "10.0.1.1")
 			},
 		},
 		{
 			name: "empty list",
 			mockResponse: map[string]interface{}{
-				"networks": []map[string]interface{}{},
+				"networks": []interface{}{},
 			},
 			expectedCount: 0,
 			opts:          nil,
@@ -74,16 +87,11 @@ func TestNetworksList_Success(t *testing.T) {
 		{
 			name: "filter by name",
 			mockResponse: map[string]interface{}{
-				"networks": []map[string]interface{}{
-					{
-						"id":          "net-1",
-						"name":        "filtered-network",
-						"description": "Filtered result",
-						"cidr":        "10.0.0.0/24",
-						"project_id":  "proj-123",
-						"created_at":  "2025-01-01T00:00:00Z",
-						"updated_at":  "2025-01-01T00:00:00Z",
-					},
+				"networks": []interface{}{
+					newNetworkPayload(map[string]interface{}{
+						"id":   "net-1",
+						"name": "filtered-network",
+					}),
 				},
 			},
 			expectedCount: 1,
@@ -94,9 +102,8 @@ func TestNetworksList_Success(t *testing.T) {
 				if len(resp.Networks) != 1 {
 					t.Errorf("expected 1 network, got %d", len(resp.Networks))
 				}
-				if resp.Networks[0].Name != "filtered-network" {
-					t.Errorf("expected network name 'filtered-network', got '%s'", resp.Networks[0].Name)
-				}
+				assertStringField(t, resp.Networks[0], "Name", "filtered-network")
+				assertStringSliceField(t, resp.Networks[0], "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
 			},
 		},
 	}

@@ -1,0 +1,224 @@
+openapi: 3.0.0
+info:
+  title: Cloud SDK Network Model Alignment
+  version: 0.1.0
+paths:
+  /api/v1/project/{project-id}/networks:
+    get:
+      summary: List networks for a project
+      responses:
+        '200':
+          description: Network list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkListResponse'
+    post:
+      summary: Create network for a project
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NetworkCreateRequest'
+      responses:
+        '201':
+          description: Created network
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Network'
+  /api/v1/project/{project-id}/networks/{network-id}/ports:
+    get:
+      summary: List ports for a network
+      responses:
+        '200':
+          description: Network port list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NetworkPortListResponse'
+components:
+  schemas:
+    Network:
+      type: object
+      required:
+        - id
+        - name
+        - cidr
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        cidr:
+          type: string
+        bonding:
+          type: boolean
+        gateway:
+          type: string
+        gw_state:
+          type: boolean
+          description: Deprecated in source API but still emitted.
+        is_default:
+          type: boolean
+        nameservers:
+          type: array
+          items:
+            type: string
+        namespace:
+          type: string
+        project:
+          $ref: '#/components/schemas/IDName'
+        project_id:
+          type: string
+        router:
+          $ref: '#/components/schemas/RouterInfo'
+        router_id:
+          type: string
+        shared:
+          type: boolean
+        status:
+          type: string
+        status_reason:
+          type: string
+        subnet_id:
+          type: string
+        user:
+          $ref: '#/components/schemas/IDName'
+        user_id:
+          type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    IDName:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+    RouterInfo:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        bonding:
+          type: boolean
+        is_default:
+          type: boolean
+        shared:
+          type: boolean
+        state:
+          type: boolean
+        status:
+          type: string
+        status_reason:
+          type: string
+        namespace:
+          type: string
+        project:
+          $ref: '#/components/schemas/IDName'
+        project_id:
+          type: string
+        user:
+          $ref: '#/components/schemas/IDName'
+        user_id:
+          type: string
+        extnetwork:
+          $ref: '#/components/schemas/ExtNetworkInfo'
+        extnetwork_id:
+          type: string
+        gw_addrs:
+          type: array
+          items:
+            type: string
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    ExtNetworkInfo:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        cidr:
+          type: string
+        namespace:
+          type: string
+        segment_id:
+          type: string
+        type:
+          type: string
+        is_default:
+          type: boolean
+    NetworkCreateRequest:
+      type: object
+      required:
+        - name
+        - cidr
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        cidr:
+          type: string
+        gateway:
+          type: string
+        router_id:
+          type: string
+    NetworkListResponse:
+      type: object
+      properties:
+        networks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Network'
+    NetworkPort:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+        addresses:
+          type: array
+          items:
+            type: string
+        server:
+          $ref: '#/components/schemas/ServerSummary'
+    NetworkPortListResponse:
+      type: object
+      properties:
+        ports:
+          type: array
+          items:
+            $ref: '#/components/schemas/NetworkPort'
+    ServerSummary:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        status:
+          type: string
+        project_id:
+          type: string
+        user_id:
+          type: string

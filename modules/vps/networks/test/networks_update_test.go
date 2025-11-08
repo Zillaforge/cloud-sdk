@@ -35,6 +35,10 @@ func TestNetworksUpdate_Success(t *testing.T) {
 				"description": "Updated description",
 				"cidr":        "10.0.0.0/24",
 				"project_id":  "proj-123",
+				"gateway":     "10.0.0.1",
+				"router_id":   "router-1",
+				"shared":      true,
+				"is_default":  false,
 				"created_at":  "2025-01-01T00:00:00Z",
 				"updated_at":  "2025-01-02T00:00:00Z",
 			},
@@ -45,6 +49,11 @@ func TestNetworksUpdate_Success(t *testing.T) {
 				if reqBody["description"] != "Updated description" {
 					t.Errorf("expected description 'Updated description', got '%v'", reqBody["description"])
 				}
+				for _, key := range []string{"gateway", "router_id", "shared", "bonding"} {
+					if _, exists := reqBody[key]; exists {
+						t.Errorf("did not expect key %q in update payload", key)
+					}
+				}
 			},
 			validateResult: func(t *testing.T, network *networks.Network) {
 				if network.Name != "updated-network" {
@@ -52,6 +61,18 @@ func TestNetworksUpdate_Success(t *testing.T) {
 				}
 				if network.Description != "Updated description" {
 					t.Errorf("expected description 'Updated description', got '%s'", network.Description)
+				}
+				if network.Gateway != "10.0.0.1" {
+					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Gateway)
+				}
+				if network.RouterID != "router-1" {
+					t.Errorf("expected router_id 'router-1', got '%s'", network.RouterID)
+				}
+				if !network.Shared {
+					t.Errorf("expected shared to be true")
+				}
+				if network.IsDefault {
+					t.Errorf("expected is_default to remain false")
 				}
 			},
 		},
@@ -67,6 +88,8 @@ func TestNetworksUpdate_Success(t *testing.T) {
 				"description": "Original description",
 				"cidr":        "192.168.0.0/24",
 				"project_id":  "proj-123",
+				"shared":      false,
+				"is_default":  true,
 				"created_at":  "2025-01-01T00:00:00Z",
 				"updated_at":  "2025-01-02T00:00:00Z",
 			},
@@ -74,10 +97,19 @@ func TestNetworksUpdate_Success(t *testing.T) {
 				if reqBody["name"] != "new-name" {
 					t.Errorf("expected name 'new-name', got '%v'", reqBody["name"])
 				}
+				if _, exists := reqBody["router_id"]; exists {
+					t.Errorf("did not expect router_id in update payload")
+				}
 			},
 			validateResult: func(t *testing.T, network *networks.Network) {
 				if network.Name != "new-name" {
 					t.Errorf("expected name 'new-name', got '%s'", network.Name)
+				}
+				if network.Shared {
+					t.Errorf("expected shared to be false")
+				}
+				if !network.IsDefault {
+					t.Errorf("expected is_default to be true")
 				}
 			},
 		},

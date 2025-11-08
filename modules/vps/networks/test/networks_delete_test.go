@@ -24,6 +24,9 @@ func TestNetworksDelete_Success(t *testing.T) {
 		if r.URL.Path != expectedPath {
 			t.Errorf("expected path '%s', got '%s'", expectedPath, r.URL.Path)
 		}
+		if r.ContentLength > 0 {
+			t.Errorf("expected delete request to have empty body, got content-length %d", r.ContentLength)
+		}
 
 		// Send 204 No Content response
 		w.WriteHeader(http.StatusNoContent)

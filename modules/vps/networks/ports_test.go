@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
-
 	"time"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
@@ -18,40 +18,104 @@ func TestPortsClient_List(t *testing.T) {
 	tests := []struct {
 		name           string
 		networkID      string
-		mockResponse   []*networks.NetworkPort
+		mockResponse   interface{}
 		mockStatusCode int
+		expectedCount  int
 		wantErr        bool
+		validate       func(*testing.T, []*networks.NetworkPort)
 	}{
 		{
 			name:      "list ports successfully",
-			networkID: "net-123",
-			mockResponse: []*networks.NetworkPort{
+			networkID: "net-full-001",
+			mockResponse: []map[string]interface{}{
 				{
-					ID:        "port-1",
-					NetworkID: "net-123",
-					FixedIPs:  []string{"10.0.1.10"},
-					MACAddr:   "fa:16:3e:11:22:33",
+					"id":        "port-1",
+					"addresses": []string{"10.0.1.10"},
+					"server": map[string]interface{}{
+						"id":         "srv-1",
+						"name":       "app-1",
+						"status":     "ACTIVE",
+						"project_id": "proj-123",
+						"user_id":    "user-1",
+					},
 				},
 				{
-					ID:        "port-2",
-					NetworkID: "net-123",
-					FixedIPs:  []string{"10.0.1.20"},
-					MACAddr:   "fa:16:3e:44:55:66",
+					"id":        "port-2",
+					"addresses": []string{"10.0.1.20", "10.0.1.21"},
+					"server": map[string]interface{}{
+						"id":     "srv-2",
+						"name":   "app-2",
+						"status": "BUILD",
+					},
 				},
 			},
 			mockStatusCode: http.StatusOK,
-			wantErr:        false,
+			expectedCount:  2,
+			validate: func(t *testing.T, ports []*networks.NetworkPort) {
+				if len(ports) != 2 {
+					t.Fatalf("expected 2 ports, got %d", len(ports))
+				}
+
+				assertStringField(t, ports[0], "ID", "port-1")
+				assertStringSliceField(t, ports[0], "Addresses", []string{"10.0.1.10"})
+				server := requirePointerStructField(t, ports[0], "Server")
+				assertStringField(t, server.Interface(), "ID", "srv-1")
+				assertStringField(t, server.Interface(), "Status", "ACTIVE")
+
+				assertStringField(t, ports[1], "ID", "port-2")
+				assertStringSliceField(t, ports[1], "Addresses", []string{"10.0.1.20", "10.0.1.21"})
+				serverField := requireStructField(t, ports[1], "Server")
+				if serverField.Kind() != reflect.Ptr {
+					t.Fatalf("expected server field to be pointer, got %s", serverField.Kind())
+				}
+				if serverField.IsNil() {
+					t.Fatal("expected second port server to be populated")
+				}
+			},
 		},
 		{
 			name:           "empty port list",
-			networkID:      "net-456",
-			mockResponse:   []*networks.NetworkPort{},
+			networkID:      "net-empty",
+			mockResponse:   []map[string]interface{}{},
 			mockStatusCode: http.StatusOK,
-			wantErr:        false,
+			expectedCount:  0,
+			validate: func(t *testing.T, ports []*networks.NetworkPort) {
+				if len(ports) != 0 {
+					t.Fatalf("expected 0 ports, got %d", len(ports))
+				}
+			},
+		},
+		{
+			name:      "port without server",
+			networkID: "net-detached",
+			mockResponse: []map[string]interface{}{
+				{
+					"id":        "port-3",
+					"addresses": []string{"192.168.1.100"},
+				},
+			},
+			mockStatusCode: http.StatusOK,
+			expectedCount:  1,
+			validate: func(t *testing.T, ports []*networks.NetworkPort) {
+				if len(ports) != 1 {
+					t.Fatalf("expected 1 port, got %d", len(ports))
+				}
+
+				assertStringField(t, ports[0], "ID", "port-3")
+				assertStringSliceField(t, ports[0], "Addresses", []string{"192.168.1.100"})
+
+				serverField := requireStructField(t, ports[0], "Server")
+				if serverField.Kind() != reflect.Ptr {
+					t.Fatalf("expected server field to be pointer, got %s", serverField.Kind())
+				}
+				if !serverField.IsNil() {
+					t.Fatalf("expected nil server pointer, got %#v", serverField.Interface())
+				}
+			},
 		},
 		{
 			name:           "network not found",
-			networkID:      "net-999",
+			networkID:      "net-missing",
 			mockStatusCode: http.StatusNotFound,
 			wantErr:        true,
 		},
@@ -101,18 +165,12 @@ func TestPortsClient_List(t *testing.T) {
 				t.Fatal("expected result, got nil")
 			}
 
-			if len(result) != len(tt.mockResponse) {
-				t.Errorf("expected %d ports, got %d", len(tt.mockResponse), len(result))
+			if len(result) != tt.expectedCount {
+				t.Errorf("expected %d ports, got %d", tt.expectedCount, len(result))
 			}
 
-			// Verify first port if available
-			if len(result) > 0 && len(tt.mockResponse) > 0 {
-				if result[0].ID != tt.mockResponse[0].ID {
-					t.Errorf("expected port ID %s, got %s", tt.mockResponse[0].ID, result[0].ID)
-				}
-				if result[0].NetworkID != tt.mockResponse[0].NetworkID {
-					t.Errorf("expected network ID %s, got %s", tt.mockResponse[0].NetworkID, result[0].NetworkID)
-				}
+			if tt.validate != nil {
+				tt.validate(t, result)
 			}
 		})
 	}

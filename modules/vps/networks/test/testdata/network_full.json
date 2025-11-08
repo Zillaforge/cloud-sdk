@@ -1,0 +1,71 @@
+{
+  "id": "net-full-001",
+  "name": "full-network",
+  "description": "Network fixture with all fields populated",
+  "cidr": "10.42.0.0/24",
+  "bonding": true,
+  "gateway": "10.42.0.1",
+  "gw_state": false,
+  "is_default": true,
+  "nameservers": [
+    "1.1.1.1",
+    "8.8.8.8"
+  ],
+  "namespace": "tenant-alpha",
+  "project": {
+    "id": "proj-001",
+    "name": "Tenant Alpha"
+  },
+  "project_id": "proj-001",
+  "router": {
+    "id": "router-123",
+    "name": "alpha-router",
+    "description": "Primary router",
+  "bonding": false,
+  "is_default": false,
+  "shared": true,
+    "state": true,
+    "status": "ACTIVE",
+    "status_reason": "OK",
+    "namespace": "tenant-alpha",
+    "project": {
+      "id": "proj-001",
+      "name": "Tenant Alpha"
+    },
+    "project_id": "proj-001",
+    "user": {
+      "id": "user-123",
+      "name": "Alice Ops"
+    },
+    "user_id": "user-123",
+    "extnetwork": {
+      "id": "extnet-001",
+      "name": "public-ext",
+      "description": "Public external network",
+      "cidr": "203.0.113.0/24",
+      "namespace": "global",
+      "segment_id": "seg-42",
+      "type": "flat",
+      "is_default": false
+    },
+    "extnetwork_id": "extnet-001",
+    "gw_addrs": [
+      "192.0.2.1",
+      "192.0.2.2"
+    ],
+    "createdAt": "2025-01-05T12:00:00Z",
+    "updatedAt": "2025-01-06T12:00:00Z"
+  },
+  "router_id": "router-123",
+  "shared": true,
+  "status": "ACTIVE",
+  "status_reason": "OK",
+  "subnet_id": "subnet-777",
+  "user": {
+    "id": "user-123",
+    "name": "Alice Ops"
+  },
+  "user_id": "user-123",
+  "createdAt": "2025-01-05T00:00:00Z",
+  "updatedAt": "2025-01-06T00:00:00Z"
+}

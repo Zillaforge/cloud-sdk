@@ -25,7 +25,9 @@ Authorization: Bearer {{TOKEN}}
 
 ### List Network
 # @name NetworkList
-GET {{BASE_URL}}/networks/ HTTP/1.1
+GET {{BASE_URL}}/networks/
+?name=default
+# &status=down HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 

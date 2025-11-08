@@ -28,17 +28,33 @@ func (c *Client) List(ctx context.Context, opts *networks.ListNetworksOptions) (
 	path := fmt.Sprintf("/api/v1/project/%s/networks", c.projectID)
 
 	// Build query parameters
-	headers := make(map[string]string)
-	if opts != nil && opts.Name != "" {
-		// Add query params via path - internal client will handle URL encoding
-		path = fmt.Sprintf("%s?name=%s", path, opts.Name)
+	if opts != nil {
+		queryParams := []string{}
+		if opts.Name != "" {
+			queryParams = append(queryParams, fmt.Sprintf("name=%s", opts.Name))
+		}
+		if opts.UserID != "" {
+			queryParams = append(queryParams, fmt.Sprintf("user_id=%s", opts.UserID))
+		}
+		if opts.Status != "" {
+			queryParams = append(queryParams, fmt.Sprintf("status=%s", opts.Status))
+		}
+		if opts.RouterID != "" {
+			queryParams = append(queryParams, fmt.Sprintf("router_id=%s", opts.RouterID))
+		}
+		if opts.Detail != nil {
+			queryParams = append(queryParams, fmt.Sprintf("detail=%t", *opts.Detail))
+		}
+		if len(queryParams) > 0 {
+			path = fmt.Sprintf("%s?%s", path, joinQueryParams(queryParams))
+		}
 	}
 
 	// Make request
 	req := &internalhttp.Request{
 		Method:  "GET",
 		Path:    path,
-		Headers: headers,
+		Headers: make(map[string]string),
 	}
 
 	var response networks.NetworkListResponse
@@ -47,6 +63,18 @@ func (c *Client) List(ctx context.Context, opts *networks.ListNetworksOptions) (
 	}
 
 	return &response, nil
+}
+
+// joinQueryParams joins query parameters with "&" separator.
+func joinQueryParams(params []string) string {
+	result := ""
+	for i, param := range params {
+		if i > 0 {
+			result += "&"
+		}
+		result += param
+	}
+	return result
 }
 
 // Create creates a new network.
