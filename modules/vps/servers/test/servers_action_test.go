@@ -17,10 +17,10 @@ func TestServersAction_Success(t *testing.T) {
 		name   string
 		action string
 	}{
-		{"start action", "start"},
-		{"stop action", "stop"},
-		{"reboot action", "reboot"},
-		{"resize action", "resize"},
+		{"start action", string(servers.ServerActionStart)},
+		{"stop action", string(servers.ServerActionStop)},
+		{"reboot action", string(servers.ServerActionReboot)},
+		{"resize action", string(servers.ServerActionResize)},
 	}
 
 	for _, tt := range tests {
@@ -44,7 +44,7 @@ func TestServersAction_Success(t *testing.T) {
 			vpsClient := client.Project("proj-123").VPS()
 
 			req := &servers.ServerActionRequest{
-				Action: tt.action,
+				Action: servers.ServerAction(tt.action),
 			}
 
 			err = vpsClient.Servers().Action(context.Background(), "svr-1", req)

@@ -32,8 +32,8 @@ func TestNewClient(t *testing.T) {
 func TestClient_List(t *testing.T) {
 	tests := []struct {
 		name           string
-		opts           *servers.ListServersOptions
-		mockResponse   *servers.ServerListResponse
+		opts           *servers.ServersListRequest
+		mockResponse   *servers.ServersListResponse
 		mockStatusCode int
 		wantErr        bool
 		checkPath      string
@@ -41,8 +41,8 @@ func TestClient_List(t *testing.T) {
 		{
 			name: "list all servers",
 			opts: nil,
-			mockResponse: &servers.ServerListResponse{
-				Items: []*servers.Server{
+			mockResponse: &servers.ServersListResponse{
+				Servers: []*servers.Server{
 					{ID: "svr-1", Name: "server-1", Status: "ACTIVE"},
 					{ID: "svr-2", Name: "server-2", Status: "STOPPED"},
 				},
@@ -53,9 +53,9 @@ func TestClient_List(t *testing.T) {
 		},
 		{
 			name: "filter by status",
-			opts: &servers.ListServersOptions{Status: "ACTIVE"},
-			mockResponse: &servers.ServerListResponse{
-				Items: []*servers.Server{
+			opts: &servers.ServersListRequest{Status: "ACTIVE"},
+			mockResponse: &servers.ServersListResponse{
+				Servers: []*servers.Server{
 					{ID: "svr-1", Name: "server-1", Status: "ACTIVE"},
 				},
 			},
@@ -113,8 +113,8 @@ func TestClient_List(t *testing.T) {
 				t.Fatal("expected result, got nil")
 			}
 
-			if len(result.Items) != len(tt.mockResponse.Items) {
-				t.Errorf("expected %d servers, got %d", len(tt.mockResponse.Items), len(result.Items))
+			if len(result.Servers) != len(tt.mockResponse.Servers) {
+				t.Errorf("expected %d servers, got %d", len(tt.mockResponse.Servers), len(result.Servers))
 			}
 		})
 	}
@@ -284,10 +284,12 @@ func TestClient_Action(t *testing.T) {
 }
 
 func TestClient_Metrics(t *testing.T) {
-	mockResponse := &servers.ServerMetricsResponse{
-		Type: "cpu",
-		Series: []servers.MetricPoint{
-			{Timestamp: time.Now().Unix(), Value: 25.5},
+	mockResponse := servers.ServerMetricsResponse{
+		{
+			Name: "cpu",
+			Measures: []servers.Measure{
+				{Granularity: 3600, Timestamp: time.Now().Unix(), Value: 25.5},
+			},
 		},
 	}
 
@@ -307,7 +309,6 @@ func TestClient_Metrics(t *testing.T) {
 	req := &servers.ServerMetricsRequest{
 		Type:  "cpu",
 		Start: time.Now().Add(-1 * time.Hour).Unix(),
-		End:   time.Now().Unix(),
 	}
 
 	result, err := client.Metrics(context.Background(), "svr-1", req)
@@ -315,13 +316,21 @@ func TestClient_Metrics(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(result.Series) != len(mockResponse.Series) {
-		t.Errorf("expected %d metrics, got %d", len(mockResponse.Series), len(result.Series))
+	if len(*result) == 0 {
+		t.Fatal("expected metrics data, got empty")
+	}
+
+	firstMetric := (*result)[0]
+	if firstMetric.Name != "cpu" {
+		t.Errorf("expected metric name 'cpu', got '%s'", firstMetric.Name)
+	}
+	if len(firstMetric.Measures) != len(mockResponse[0].Measures) {
+		t.Errorf("expected %d measures, got %d", len(mockResponse[0].Measures), len(firstMetric.Measures))
 	}
 }
 
 func TestClient_VNCURL(t *testing.T) {
-	mockResponse := &servers.VNCURLResponse{
+	mockResponse := &servers.ServerConsoleURLResponse{
 		URL: "https://console.example.com/vnc?token=abc123",
 	}
 
@@ -338,7 +347,7 @@ func TestClient_VNCURL(t *testing.T) {
 	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
 	client := NewClient(baseClient, "proj-123")
 
-	result, err := client.VNCURL(context.Background(), "svr-1")
+	result, err := client.GetVNCConsoleURL(context.Background(), "svr-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

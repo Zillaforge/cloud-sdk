@@ -35,7 +35,7 @@ func TestServersVNCURL_Success(t *testing.T) {
 	}
 	vpsClient := client.Project("proj-123").VPS()
 
-	vncResp, err := vpsClient.Servers().VNCURL(context.Background(), "svr-1")
+	vncResp, err := vpsClient.Servers().GetVNCConsoleURL(context.Background(), "svr-1")
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
@@ -75,7 +75,7 @@ func TestServersVNCURL_Errors(t *testing.T) {
 			}
 			vpsClient := client.Project("proj-123").VPS()
 
-			_, err = vpsClient.Servers().VNCURL(context.Background(), "svr-1")
+			_, err = vpsClient.Servers().GetVNCConsoleURL(context.Background(), "svr-1")
 			if err == nil {
 				t.Fatal("expected error, got nil")
 			}

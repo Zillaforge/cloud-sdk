@@ -13,20 +13,22 @@ import (
 
 // TestServerNICs_List_Success verifies successful NIC listing
 func TestServerNICs_List_Success(t *testing.T) {
-	mockResponse := []map[string]interface{}{
-		{
-			"id":          "nic-1",
-			"network_id":  "net-1",
-			"fixed_ips":   []string{"10.0.0.10"},
-			"mac_address": "fa:16:3e:00:00:01",
-			"sg_ids":      []string{"sg-1"},
-		},
-		{
-			"id":          "nic-2",
-			"network_id":  "net-2",
-			"fixed_ips":   []string{"10.0.1.10"},
-			"mac_address": "fa:16:3e:00:00:02",
-			"sg_ids":      []string{"sg-1", "sg-2"},
+	mockResponse := map[string]interface{}{
+		"nics": []map[string]interface{}{
+			{
+				"id":         "nic-1",
+				"network_id": "net-1",
+				"addresses":  []string{"10.0.0.10"},
+				"mac":        "fa:16:3e:00:00:01",
+				"sg_ids":     []string{"sg-1"},
+			},
+			{
+				"id":         "nic-2",
+				"network_id": "net-2",
+				"addresses":  []string{"10.0.1.10"},
+				"mac":        "fa:16:3e:00:00:02",
+				"sg_ids":     []string{"sg-1", "sg-2"},
+			},
 		},
 	}
 
@@ -70,13 +72,13 @@ func TestServerNICs_List_Success(t *testing.T) {
 		t.Fatalf("failed to get server: %v", err)
 	}
 
-	nics, err := serverResource.NICs().List(context.Background())
+	response, err := serverResource.NICs().List(context.Background())
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(nics) != 2 {
-		t.Errorf("expected 2 NICs, got %d", len(nics))
+	if len(response.NICs) != 2 {
+		t.Errorf("expected 2 NICs, got %d", len(response.NICs))
 	}
 }
 
@@ -261,11 +263,11 @@ func TestServerNICs_AssociateFloatingIP_Success(t *testing.T) {
 		t.Fatalf("failed to get server: %v", err)
 	}
 
-	req := &servers.FloatingIPAssociateRequest{
-		FloatingIPID: "fip-1",
+	req := &servers.ServerNICAssociateFloatingIPRequest{
+		FIPID: "fip-1",
 	}
 
-	err = serverResource.NICs().AssociateFloatingIP(context.Background(), "nic-1", req)
+	_, err = serverResource.NICs().AssociateFloatingIP(context.Background(), "nic-1", req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}

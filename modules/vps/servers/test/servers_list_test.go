@@ -17,13 +17,13 @@ func TestServersList_Success(t *testing.T) {
 		name           string
 		mockResponse   interface{}
 		expectedCount  int
-		opts           *servers.ListServersOptions
-		validateResult func(*testing.T, *servers.ServerListResponse)
+		opts           *servers.ServersListRequest
+		validateResult func(*testing.T, *servers.ServersListResponse)
 	}{
 		{
 			name: "list all servers",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{
+				"servers": []map[string]interface{}{
 					{
 						"id":          "svr-1",
 						"name":        "web-server",
@@ -53,22 +53,19 @@ func TestServersList_Success(t *testing.T) {
 			},
 			expectedCount: 2,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *servers.ServerListResponse) {
-				if len(resp.Items) != 2 {
-					t.Errorf("expected 2 servers, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
+				if len(resp.Servers) != 2 {
+					t.Errorf("expected 2 servers, got %d", len(resp.Servers))
 				}
-				if resp.Total != 2 {
-					t.Errorf("expected total 2, got %d", resp.Total)
-				}
-				if resp.Items[0].Name != "web-server" {
-					t.Errorf("expected first server name 'web-server', got '%s'", resp.Items[0].Name)
+				if resp.Servers[0].Name != "web-server" {
+					t.Errorf("expected first server name 'web-server', got '%s'", resp.Servers[0].Name)
 				}
 			},
 		},
 		{
 			name: "filter by status",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{
+				"servers": []map[string]interface{}{
 					{
 						"id":         "svr-3",
 						"name":       "build-server",
@@ -83,29 +80,28 @@ func TestServersList_Success(t *testing.T) {
 				"total": 1,
 			},
 			expectedCount: 1,
-			opts: &servers.ListServersOptions{
+			opts: &servers.ServersListRequest{
 				Status: "BUILD",
 			},
-			validateResult: func(t *testing.T, resp *servers.ServerListResponse) {
-				if len(resp.Items) != 1 {
-					t.Errorf("expected 1 server, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
+				if len(resp.Servers) != 1 {
+					t.Errorf("expected 1 server, got %d", len(resp.Servers))
 				}
-				if resp.Items[0].Status != "BUILD" {
-					t.Errorf("expected status 'BUILD', got '%s'", resp.Items[0].Status)
+				if resp.Servers[0].Status != servers.ServerStatusBuild {
+					t.Errorf("expected status 'BUILD', got '%s'", resp.Servers[0].Status)
 				}
 			},
 		},
 		{
 			name: "empty list",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{},
-				"total": 0,
+				"servers": []map[string]interface{}{},
 			},
 			expectedCount: 0,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *servers.ServerListResponse) {
-				if len(resp.Items) != 0 {
-					t.Errorf("expected 0 servers, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
+				if len(resp.Servers) != 0 {
+					t.Errorf("expected 0 servers, got %d", len(resp.Servers))
 				}
 			},
 		},

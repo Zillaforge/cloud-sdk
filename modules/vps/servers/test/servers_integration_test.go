@@ -69,10 +69,12 @@ func TestServerLifecycle(t *testing.T) {
 
 		// Get metrics
 		if r.Method == "GET" && r.URL.Path == "/vps/api/v1/project/proj-123/servers/"+serverID+"/metric" {
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
-				"type": "cpu",
-				"series": []map[string]interface{}{
-					{"timestamp": 1704067200, "value": 45.5},
+			_ = json.NewEncoder(w).Encode([]map[string]interface{}{
+				{
+					"name": "cpu",
+					"measures": []map[string]interface{}{
+						{"granularity": 3600, "timestamp": 1704067200, "value": 45.5},
+					},
 				},
 			})
 			return
@@ -109,8 +111,8 @@ func TestServerLifecycle(t *testing.T) {
 		Description: "Server for lifecycle testing",
 		FlavorID:    "flv-1",
 		ImageID:     "img-1",
-		NICs: []servers.ServerNICRequest{
-			{NetworkID: "net-1"},
+		NICs: []servers.ServerNICCreateRequest{
+			{NetworkID: "net-1", SGIDs: []string{"sg-1"}},
 		},
 		SGIDs: []string{"sg-1"},
 	}
@@ -161,20 +163,19 @@ func TestServerLifecycle(t *testing.T) {
 	metricsReq := &servers.ServerMetricsRequest{
 		Type:        "cpu",
 		Start:       1704067200,
-		End:         1704153600,
 		Granularity: 3600,
 	}
 	metrics, err := vpsClient.Servers().Metrics(context.Background(), serverID, metricsReq)
 	if err != nil {
 		t.Fatalf("failed to get metrics: %v", err)
 	}
-	if len(metrics.Series) == 0 {
+	if len(*metrics) == 0 {
 		t.Error("expected metrics data, got empty")
 	}
 	t.Log("✓ Server metrics retrieved")
 
 	t.Log("Step 6: Getting VNC URL...")
-	vncResp, err := vpsClient.Servers().VNCURL(context.Background(), serverID)
+	vncResp, err := vpsClient.Servers().GetVNCConsoleURL(context.Background(), serverID)
 	if err != nil {
 		t.Fatalf("failed to get VNC URL: %v", err)
 	}

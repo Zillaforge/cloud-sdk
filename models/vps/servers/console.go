@@ -1,6 +1,6 @@
 package servers
 
-// VNCURLResponse is the response from VNCURL.
-type VNCURLResponse struct {
+// ServerConsoleURLResponse is the response from GetVNCConsoleURL.
+type ServerConsoleURLResponse struct {
 	URL string `json:"url"`
 }

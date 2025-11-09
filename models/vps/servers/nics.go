@@ -1,12 +1,41 @@
 package servers
 
-// ServerNIC represents a vNIC attached to a server.
+// FloatingIPInfo contains floating IP information.
+type FloatingIPInfo struct {
+	Address      string  `json:"address"`
+	ApprovedAt   string  `json:"approvedAt,omitempty"`
+	CreatedAt    string  `json:"createdAt,omitempty"`
+	Description  string  `json:"description,omitempty"`
+	DeviceID     string  `json:"device_id,omitempty"`
+	DeviceName   string  `json:"device_name,omitempty"`
+	DeviceType   string  `json:"device_type,omitempty"`
+	ExtnetID     string  `json:"extnet_id,omitempty"`
+	ID           string  `json:"id"`
+	Name         string  `json:"name,omitempty"`
+	Namespace    string  `json:"namespace,omitempty"`
+	PortID       string  `json:"port_id,omitempty"`
+	Project      *IDName `json:"project,omitempty"`
+	ProjectID    string  `json:"project_id,omitempty"`
+	Reserved     bool    `json:"reserved,omitempty"`
+	Status       string  `json:"status,omitempty"`
+	StatusReason string  `json:"status_reason,omitempty"`
+	UpdatedAt    string  `json:"updatedAt,omitempty"`
+	User         *IDName `json:"user,omitempty"`
+	UserID       string  `json:"user_id,omitempty"`
+	UUID         string  `json:"uuid,omitempty"`
+}
+
+// ServerNIC represents a vNIC attached to a server (ServerNICInfo from pb).
 type ServerNIC struct {
-	ID        string   `json:"id"`
-	NetworkID string   `json:"network_id"`
-	FixedIPs  []string `json:"fixed_ips"`
-	MACAddr   string   `json:"mac_address"`
-	SGIDs     []string `json:"sg_ids"`
+	ID             string          `json:"id"`
+	MAC            string          `json:"mac"`
+	NetworkID      string          `json:"network_id"`
+	Network        *IDName         `json:"network,omitempty"`
+	Addresses      []string        `json:"addresses,omitempty"`
+	FloatingIP     *FloatingIPInfo `json:"floating_ip,omitempty"`
+	SecurityGroups []*IDName       `json:"security_groups,omitempty"`
+	SGIDs          []string        `json:"sg_ids,omitempty"`
+	IsProviderNet  bool            `json:"is_provider_net,omitempty"`
 }
 
 // ServerNICCreateRequest is the body for AddServerNIC.
@@ -21,7 +50,12 @@ type ServerNICUpdateRequest struct {
 	SGIDs []string `json:"sg_ids"`
 }
 
-// FloatingIPAssociateRequest is the body for AssociateFloatingIPToNIC.
-type FloatingIPAssociateRequest struct {
-	FloatingIPID string `json:"fip_id,omitempty"` // existing FIP; omit to create new
+// ServerNICsListResponse is the response from listing NICs.
+type ServerNICsListResponse struct {
+	NICs []*ServerNIC `json:"nics"`
+}
+
+// ServerNICAssociateFloatingIPRequest is the body for AssociateFloatingIPToNIC.
+type ServerNICAssociateFloatingIPRequest struct {
+	FIPID string `json:"fip_id"`
 }

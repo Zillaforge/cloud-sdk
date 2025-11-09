@@ -13,11 +13,13 @@ import (
 
 // TestServersMetrics_Success verifies successful metrics retrieval
 func TestServersMetrics_Success(t *testing.T) {
-	mockResponse := map[string]interface{}{
-		"type": "cpu",
-		"series": []map[string]interface{}{
-			{"timestamp": 1704067200, "value": 45.5},
-			{"timestamp": 1704070800, "value": 50.2},
+	mockResponse := []map[string]interface{}{
+		{
+			"name": "cpu",
+			"measures": []map[string]interface{}{
+				{"granularity": 3600, "timestamp": 1704067200, "value": 45.5},
+				{"granularity": 3600, "timestamp": 1704070800, "value": 50.2},
+			},
 		},
 	}
 
@@ -48,7 +50,6 @@ func TestServersMetrics_Success(t *testing.T) {
 	req := &servers.ServerMetricsRequest{
 		Type:        "cpu",
 		Start:       1704067200,
-		End:         1704153600,
 		Granularity: 3600,
 	}
 
@@ -57,11 +58,16 @@ func TestServersMetrics_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if metrics.Type != "cpu" {
-		t.Errorf("expected type 'cpu', got '%s'", metrics.Type)
+	if len(*metrics) == 0 {
+		t.Fatal("expected metrics data, got empty response")
 	}
-	if len(metrics.Series) != 2 {
-		t.Errorf("expected 2 data points, got %d", len(metrics.Series))
+
+	firstMetric := (*metrics)[0]
+	if firstMetric.Name != "cpu" {
+		t.Errorf("expected metric name 'cpu', got '%s'", firstMetric.Name)
+	}
+	if len(firstMetric.Measures) != 2 {
+		t.Errorf("expected 2 data points, got %d", len(firstMetric.Measures))
 	}
 }
 

@@ -50,8 +50,8 @@ func TestServersCreate_Success(t *testing.T) {
 		Description: "Newly created server",
 		FlavorID:    "flv-1",
 		ImageID:     "img-1",
-		NICs: []servers.ServerNICRequest{
-			{NetworkID: "net-1"},
+		NICs: []servers.ServerNICCreateRequest{
+			{NetworkID: "net-1", SGIDs: []string{"sg-1"}},
 		},
 		SGIDs: []string{"sg-1"},
 	}

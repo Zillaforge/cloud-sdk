@@ -1,54 +1,110 @@
 package servers
 
-// Server represents a compute instance.
+// ServerStatus represents the status of a server.
+type ServerStatus string
+
+// Server status constants
+const (
+	ServerStatusActive    ServerStatus = "ACTIVE"
+	ServerStatusBuild     ServerStatus = "BUILD"
+	ServerStatusShutoff   ServerStatus = "SHUTOFF"
+	ServerStatusError     ServerStatus = "ERROR"
+	ServerStatusReboot    ServerStatus = "REBOOT"
+	ServerStatusDeleted   ServerStatus = "DELETED"
+	ServerStatusSuspended ServerStatus = "SUSPENDED"
+)
+
+// IDName represents an entity with ID and Name.
+type IDName struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// FlavorInfo contains detailed flavor information.
+type FlavorInfo struct {
+	ID     string `json:"id"`
+	Name   string `json:"name"`
+	VCPU   int    `json:"vcpu"`
+	Memory int    `json:"memory"` // MB
+	Disk   int    `json:"disk"`   // GB
+}
+
+// VRMImgInfo contains VRM image repository information.
+type VRMImgInfo struct {
+	RepositoryID   string `json:"repository_id"`
+	RepositoryName string `json:"repository_name"`
+	TagID          string `json:"tag_id"`
+	TagName        string `json:"tag_name"`
+}
+
+// Server represents a compute instance with all pb.ServerInfo fields.
 type Server struct {
-	ID          string            `json:"id"`
-	Name        string            `json:"name"`
-	Description string            `json:"description,omitempty"`
-	Status      string            `json:"status"` // ACTIVE, BUILD, SHUTOFF, ERROR, etc.
-	FlavorID    string            `json:"flavor_id"`
-	ImageID     string            `json:"image_id"`
-	ProjectID   string            `json:"project_id"`
-	UserID      string            `json:"user_id,omitempty"`
-	CreatedAt   string            `json:"created_at"`
-	UpdatedAt   string            `json:"updated_at"`
-	Metadata    map[string]string `json:"metadata,omitempty"`
+	ID           string            `json:"id"`
+	Name         string            `json:"name"`
+	Description  string            `json:"description,omitempty"`
+	Status       ServerStatus      `json:"status"`
+	StatusReason string            `json:"status_reason,omitempty"`
+	FlavorID     string            `json:"flavor_id"`
+	Flavor       *IDName           `json:"flavor,omitempty"`
+	FlavorDetail *FlavorInfo       `json:"flavor_detail,omitempty"`
+	ImageID      string            `json:"image_id"`
+	Image        *VRMImgInfo       `json:"image,omitempty"`
+	ProjectID    string            `json:"project_id"`
+	Project      *IDName           `json:"project,omitempty"`
+	UserID       string            `json:"user_id,omitempty"`
+	User         *IDName           `json:"user,omitempty"`
+	KeypairID    string            `json:"keypair_id,omitempty"`
+	Keypair      *IDName           `json:"keypair,omitempty"`
+	Metadatas    map[string]string `json:"metadatas,omitempty"`
+	PrivateIPs   []string          `json:"private_ips,omitempty"`
+	PublicIPs    []string          `json:"public_ips,omitempty"`
+	AZ           string            `json:"az,omitempty"`
+	Namespace    string            `json:"namespace,omitempty"`
+	RootDiskID   string            `json:"root_disk_id,omitempty"`
+	RootDiskSize int               `json:"root_disk_size,omitempty"`
+	BootScript   string            `json:"boot_script,omitempty"`
+	ApprovedAt   string            `json:"approvedAt,omitempty"`
+	CreatedAt    string            `json:"createdAt"`
+	UpdatedAt    string            `json:"updatedAt"`
+	UUID         string            `json:"uuid,omitempty"`
 }
 
-// ListServersOptions contains filter/pagination options for List.
-type ListServersOptions struct {
-	Name     string
-	UserID   string
-	Status   string
-	FlavorID string
-	ImageID  string
-	Limit    int
-	Offset   int
+// ServersListRequest contains filter/pagination options for List.
+type ServersListRequest struct {
+	Name     string `json:"name,omitempty"`
+	UserID   string `json:"user_id,omitempty"`
+	Status   string `json:"status,omitempty"`
+	FlavorID string `json:"flavor_id,omitempty"`
+	ImageID  string `json:"image_id,omitempty"`
+	Detail   bool   `json:"detail,omitempty"`
 }
 
-// ServerListResponse is the response from List.
-type ServerListResponse struct {
-	Items []*Server `json:"items"`
-	Total int       `json:"total,omitempty"`
+// ServersListResponse is the response from List.
+type ServersListResponse struct {
+	Servers []*Server `json:"servers"`
+}
+
+// ServerDiskRequest specifies disk/volume for server creation.
+type ServerDiskRequest struct {
+	Name     string `json:"name,omitempty"`
+	VolumeID string `json:"volume_id,omitempty"`
+	Type     string `json:"type,omitempty"`
+	Size     int    `json:"size,omitempty"`
 }
 
 // ServerCreateRequest is the body for Create.
 type ServerCreateRequest struct {
-	Name        string             `json:"name"`
-	Description string             `json:"description,omitempty"`
-	FlavorID    string             `json:"flavor_id"`
-	ImageID     string             `json:"image_id"`
-	NICs        []ServerNICRequest `json:"nics"`
-	SGIDs       []string           `json:"sg_ids"`
-	KeypairID   string             `json:"keypair_id,omitempty"`
-	Password    string             `json:"password,omitempty"`    // Base64
-	BootScript  string             `json:"boot_script,omitempty"` // Base64
-}
-
-// ServerNICRequest specifies a NIC for server creation.
-type ServerNICRequest struct {
-	NetworkID string `json:"network_id"`
-	FixedIP   string `json:"fixed_ip,omitempty"`
+	Name        string                   `json:"name"`
+	Description string                   `json:"description,omitempty"`
+	FlavorID    string                   `json:"flavor_id"`
+	ImageID     string                   `json:"image_id"`
+	NICs        []ServerNICCreateRequest `json:"nics"`
+	SGIDs       []string                 `json:"sg_ids,omitempty"`
+	KeypairID   string                   `json:"keypair_id,omitempty"`
+	Password    string                   `json:"password,omitempty"`    // Base64
+	BootScript  string                   `json:"boot_script,omitempty"` // Base64
+	VolumeIDs   []string                 `json:"volume_ids,omitempty"`  // deprecated
+	Volumes     []ServerDiskRequest      `json:"volumes,omitempty"`
 }
 
 // ServerUpdateRequest is the body for Update.

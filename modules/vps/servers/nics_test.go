@@ -13,13 +13,15 @@ import (
 )
 
 func TestNICsClient_List(t *testing.T) {
-	mockResponse := []*servers.ServerNIC{
-		{
-			ID:        "nic-1",
-			NetworkID: "net-1",
-			FixedIPs:  []string{"10.0.0.10"},
-			MACAddr:   "fa:16:3e:00:00:01",
-			SGIDs:     []string{"sg-1"},
+	mockResponse := &servers.ServerNICsListResponse{
+		NICs: []*servers.ServerNIC{
+			{
+				ID:        "nic-1",
+				NetworkID: "net-1",
+				Addresses: []string{"10.0.0.10"},
+				MAC:       "fa:16:3e:00:00:01",
+				SGIDs:     []string{"sg-1"},
+			},
 		},
 	}
 
@@ -45,8 +47,8 @@ func TestNICsClient_List(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(result) != len(mockResponse) {
-		t.Errorf("expected %d NICs, got %d", len(mockResponse), len(result))
+	if len(result.NICs) != len(mockResponse.NICs) {
+		t.Errorf("expected %d NICs, got %d", len(mockResponse.NICs), len(result.NICs))
 	}
 }
 
@@ -54,8 +56,8 @@ func TestNICsClient_Add(t *testing.T) {
 	mockResponse := &servers.ServerNIC{
 		ID:        "nic-new",
 		NetworkID: "net-1",
-		FixedIPs:  []string{"10.0.0.20"},
-		MACAddr:   "fa:16:3e:00:00:02",
+		Addresses: []string{"10.0.0.20"},
+		MAC:       "fa:16:3e:00:00:02",
 		SGIDs:     []string{"sg-1"},
 	}
 
@@ -96,8 +98,8 @@ func TestNICsClient_Update(t *testing.T) {
 	mockResponse := &servers.ServerNIC{
 		ID:        "nic-1",
 		NetworkID: "net-1",
-		FixedIPs:  []string{"10.0.0.10"},
-		MACAddr:   "fa:16:3e:00:00:01",
+		Addresses: []string{"10.0.0.10"},
+		MAC:       "fa:16:3e:00:00:01",
 		SGIDs:     []string{"sg-1", "sg-2"},
 	}
 
@@ -156,12 +158,19 @@ func TestNICsClient_Delete(t *testing.T) {
 }
 
 func TestNICsClient_AssociateFloatingIP(t *testing.T) {
+	mockResponse := &servers.FloatingIPInfo{
+		ID:      "fip-1",
+		Address: "203.0.113.10",
+	}
+
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "POST" {
 			t.Errorf("expected POST, got %s", r.Method)
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(mockResponse)
 	}))
 	defer server.Close()
 
@@ -172,12 +181,16 @@ func TestNICsClient_AssociateFloatingIP(t *testing.T) {
 		serverID:   "svr-1",
 	}
 
-	req := &servers.FloatingIPAssociateRequest{
-		FloatingIPID: "fip-1",
+	req := &servers.ServerNICAssociateFloatingIPRequest{
+		FIPID: "fip-1",
 	}
 
-	err := nicsClient.AssociateFloatingIP(context.Background(), "nic-1", req)
+	result, err := nicsClient.AssociateFloatingIP(context.Background(), "nic-1", req)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+
+	if result.ID != mockResponse.ID {
+		t.Errorf("expected floating IP ID %s, got %s", mockResponse.ID, result.ID)
 	}
 }

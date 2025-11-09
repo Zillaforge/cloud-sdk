@@ -1,0 +1,583 @@
+swagger: "2.0"
+info:
+  title: VPS Server APIs
+  version: "0.1"
+host: localhost:8106
+basePath: /vps
+paths:
+  /api/v1/project/{project-id}/servers:
+    get:
+      summary: List Servers
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: name
+        in: query
+        type: string
+      - name: user_id
+        in: query
+        type: string
+      - name: status
+        in: query
+        type: string
+      - name: image_id
+        in: query
+        type: string
+      - name: flavor_id
+        in: query
+        type: string
+      - name: detail
+        in: query
+        type: boolean
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerListOutput'
+    post:
+      summary: Create Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/ServerCreateInput'
+      responses:
+        201:
+          description: Created
+          schema:
+            $ref: '#/definitions/ServerInfo'
+  /api/v1/project/{project-id}/servers/{svr-id}:
+    get:
+      summary: Get Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerInfo'
+    put:
+      summary: Update Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/ServerUpdateInput'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerInfo'
+    delete:
+      summary: Delete Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      responses:
+        202:
+          description: Accepted
+  /api/v1/project/{project-id}/servers/{svr-id}/action:
+    post:
+      summary: Do Action to server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/ServerActionInput'
+      responses:
+        202:
+          description: Accepted
+          schema:
+            $ref: '#/definitions/ServerActionOutput'
+  /api/v1/project/{project-id}/servers/{svr-id}/metric:
+    get:
+      summary: Get Server Metric
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: type
+        in: query
+        required: true
+        type: string
+      - name: start
+        in: query
+        required: true
+        type: integer
+      - name: granularity
+        in: query
+        type: integer
+      - name: direction
+        in: query
+        type: string
+      - name: rw
+        in: query
+        type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/MetricInfo'
+  /api/v1/project/{project-id}/servers/{svr-id}/nics:
+    get:
+      summary: List Server's vNICs
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerNICListOutput'
+    post:
+      summary: Add a new vNIC to Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/NICCreateInput'
+      responses:
+        202:
+          description: Accepted
+  /api/v1/project/{project-id}/servers/{svr-id}/nics/{nic-id}:
+    put:
+      summary: update server's vNIC
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: nic-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/NICUpdateInput'
+      responses:
+        200:
+          description: OK
+    delete:
+      summary: Remove a vNIC from Server
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: nic-id
+        in: path
+        required: true
+        type: string
+      responses:
+        202:
+          description: Accepted
+  /api/v1/project/{project-id}/servers/{svr-id}/nics/{nic-id}/floatingip:
+    post:
+      summary: Associate FloatingIP to a vNIC
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      - name: nic-id
+        in: path
+        required: true
+        type: string
+      - name: data
+        in: body
+        schema:
+          $ref: '#/definitions/FIPAssoInput'
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/FloatingIPInfo'
+  /api/v1/project/{project-id}/servers/{svr-id}/vnc_url:
+    get:
+      summary: Get VNC console URL
+      parameters:
+      - name: project-id
+        in: path
+        required: true
+        type: string
+      - name: svr-id
+        in: path
+        required: true
+        type: string
+      responses:
+        200:
+          description: OK
+          schema:
+            $ref: '#/definitions/ServerConsoleURLOutput'
+definitions:
+  ServerInfo:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      description:
+        type: string
+      status:
+        type: string
+      status_reason:
+        type: string
+      flavor_id:
+        type: string
+      flavor:
+        $ref: '#/definitions/IDName'
+      flavor_detail:
+        $ref: '#/definitions/FlavorInfo'
+      image_id:
+        type: string
+      image:
+        $ref: '#/definitions/VRMImgInfo'
+      project_id:
+        type: string
+      project:
+        $ref: '#/definitions/IDName'
+      user_id:
+        type: string
+      user:
+        $ref: '#/definitions/IDName'
+      keypair_id:
+        type: string
+      keypair:
+        $ref: '#/definitions/IDName'
+      metadatas:
+        type: object
+        additionalProperties:
+          type: string
+      private_ips:
+        type: array
+        items:
+          type: string
+      public_ips:
+        type: array
+        items:
+          type: string
+      az:
+        type: string
+      namespace:
+        type: string
+      root_disk_id:
+        type: string
+      root_disk_size:
+        type: integer
+      boot_script:
+        type: string
+      approvedAt:
+        type: string
+      createdAt:
+        type: string
+      updatedAt:
+        type: string
+      uuid:
+        type: string
+  ServerListOutput:
+    properties:
+      servers:
+        type: array
+        items:
+          $ref: '#/definitions/ServerInfo'
+  ServerCreateInput:
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+      flavor_id:
+        type: string
+      image_id:
+        type: string
+      nics:
+        type: array
+        items:
+          $ref: '#/definitions/NICCreateInput'
+      sg_ids:
+        type: array
+        items:
+          type: string
+      keypair_id:
+        type: string
+      password:
+        type: string
+      boot_script:
+        type: string
+      volume_ids:
+        type: array
+        items:
+          type: string
+      volumes:
+        type: array
+        items:
+          $ref: '#/definitions/ServerDiskInput'
+    required:
+    - name
+    - flavor_id
+    - image_id
+    - nics
+  ServerUpdateInput:
+    properties:
+      name:
+        type: string
+      description:
+        type: string
+  ServerActionInput:
+    properties:
+      action:
+        type: string
+        enum:
+        - stop
+        - start
+        - reboot
+        - resize
+        - approve
+        - reject
+        - extend_root
+        - get_pwd
+      flavor_id:
+        type: string
+      private_key:
+        type: string
+      reboot_type:
+        type: string
+        enum:
+        - hard
+        - soft
+      root_size:
+        type: integer
+    required:
+    - action
+  ServerActionOutput:
+    properties:
+      password:
+        type: string
+  MetricInfo:
+    properties:
+      measures:
+        type: array
+        items:
+          $ref: '#/definitions/Measure'
+      name:
+        type: string
+  Measure:
+    properties:
+      granularity:
+        type: integer
+      timestamp:
+        type: integer
+      value:
+        type: number
+  ServerNICInfo:
+    properties:
+      addresses:
+        type: array
+        items:
+          type: string
+      floating_ip:
+        $ref: '#/definitions/FloatingIPInfo'
+      id:
+        type: string
+      is_provider_net:
+        type: boolean
+      mac:
+        type: string
+      network:
+        $ref: '#/definitions/IDName'
+      network_id:
+        type: string
+      security_groups:
+        type: array
+        items:
+          $ref: '#/definitions/IDName'
+      sg_ids:
+        type: array
+        items:
+          type: string
+  ServerNICListOutput:
+    properties:
+      nics:
+        type: array
+        items:
+          $ref: '#/definitions/ServerNICInfo'
+  NICCreateInput:
+    properties:
+      network_id:
+        type: string
+      sg_ids:
+        type: array
+        items:
+          type: string
+      fixed_ip:
+        type: string
+    required:
+    - network_id
+    - sg_ids
+  NICUpdateInput:
+    properties:
+      sg_ids:
+        type: array
+        items:
+          type: string
+    required:
+    - sg_ids
+  FIPAssoInput:
+    properties:
+      fip_id:
+        type: string
+  FloatingIPInfo:
+    properties:
+      address:
+        type: string
+      approvedAt:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      device_id:
+        type: string
+      device_name:
+        type: string
+      device_type:
+        type: string
+      extnet_id:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      namespace:
+        type: string
+      port_id:
+        type: string
+      project:
+        $ref: '#/definitions/IDName'
+      project_id:
+        type: string
+      reserved:
+        type: boolean
+      status:
+        type: string
+      status_reason:
+        type: string
+      updatedAt:
+        type: string
+      user:
+        $ref: '#/definitions/IDName'
+      user_id:
+        type: string
+      uuid:
+        type: string
+  ServerConsoleURLOutput:
+    properties:
+      url:
+        type: string
+  ServerDiskInput:
+    properties:
+      name:
+        type: string
+      volume_id:
+        type: string
+      type:
+        type: string
+      size:
+        type: integer
+  IDName:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+  FlavorInfo:
+    properties:
+      id:
+        type: string
+      name:
+        type: string
+      vcpu:
+        type: integer
+      memory:
+        type: integer
+      disk:
+        type: integer
+  VRMImgInfo:
+    properties:
+      repository_id:
+        type: string
+      repository_name:
+        type: string
+      tag_id:
+        type: string
+      tag_name:
+        type: string

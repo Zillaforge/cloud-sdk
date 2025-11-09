@@ -24,7 +24,7 @@ func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 
 // List retrieves all servers for the project with optional filters.
 // GET /api/v1/project/{project-id}/servers
-func (c *Client) List(ctx context.Context, opts *servers.ListServersOptions) (*servers.ServerListResponse, error) {
+func (c *Client) List(ctx context.Context, opts *servers.ServersListRequest) (*servers.ServersListResponse, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers", c.projectID)
 
 	// Build query parameters
@@ -45,11 +45,8 @@ func (c *Client) List(ctx context.Context, opts *servers.ListServersOptions) (*s
 		if opts.ImageID != "" {
 			query += fmt.Sprintf("image_id=%s&", opts.ImageID)
 		}
-		if opts.Limit > 0 {
-			query += fmt.Sprintf("limit=%d&", opts.Limit)
-		}
-		if opts.Offset > 0 {
-			query += fmt.Sprintf("offset=%d&", opts.Offset)
+		if opts.Detail {
+			query += "detail=true&"
 		}
 		if query != "" {
 			path = fmt.Sprintf("%s?%s", path, query[:len(query)-1]) // Remove trailing &
@@ -62,7 +59,7 @@ func (c *Client) List(ctx context.Context, opts *servers.ListServersOptions) (*s
 		Path:   path,
 	}
 
-	var response servers.ServerListResponse
+	var response servers.ServersListResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
 		return nil, err
 	}
@@ -193,8 +190,11 @@ func (c *Client) Metrics(ctx context.Context, serverID string, req *servers.Serv
 		if req.Start > 0 {
 			query += fmt.Sprintf("start=%d&", req.Start)
 		}
-		if req.End > 0 {
-			query += fmt.Sprintf("end=%d&", req.End)
+		if req.Direction != "" {
+			query += fmt.Sprintf("direction=%s&", req.Direction)
+		}
+		if req.RW != "" {
+			query += fmt.Sprintf("rw=%s&", req.RW)
 		}
 		if req.Granularity > 0 {
 			query += fmt.Sprintf("granularity=%d&", req.Granularity)
@@ -218,9 +218,9 @@ func (c *Client) Metrics(ctx context.Context, serverID string, req *servers.Serv
 	return &response, nil
 }
 
-// VNCURL retrieves the VNC console URL for a server.
+// GetVNCConsoleURL retrieves the VNC console URL for a server.
 // GET /api/v1/project/{project-id}/servers/{svr-id}/vnc_url
-func (c *Client) VNCURL(ctx context.Context, serverID string) (*servers.VNCURLResponse, error) {
+func (c *Client) GetVNCConsoleURL(ctx context.Context, serverID string) (*servers.ServerConsoleURLResponse, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/vnc_url", c.projectID, serverID)
 
 	// Make request
@@ -229,7 +229,7 @@ func (c *Client) VNCURL(ctx context.Context, serverID string) (*servers.VNCURLRe
 		Path:   path,
 	}
 
-	var response servers.VNCURLResponse
+	var response servers.ServerConsoleURLResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
 		return nil, err
 	}
@@ -256,11 +256,11 @@ func (sr *ServerResource) Volumes() VolumeOperations {
 
 // NICOperations defines operations on server NICs (sub-resource).
 type NICOperations interface {
-	List(ctx context.Context) ([]*servers.ServerNIC, error)
+	List(ctx context.Context) (*servers.ServerNICsListResponse, error)
 	Add(ctx context.Context, req *servers.ServerNICCreateRequest) (*servers.ServerNIC, error)
 	Update(ctx context.Context, nicID string, req *servers.ServerNICUpdateRequest) (*servers.ServerNIC, error)
 	Delete(ctx context.Context, nicID string) error
-	AssociateFloatingIP(ctx context.Context, nicID string, req *servers.FloatingIPAssociateRequest) error
+	AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*servers.FloatingIPInfo, error)
 }
 
 // VolumeOperations defines operations on server volumes (sub-resource).

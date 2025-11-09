@@ -17,7 +17,7 @@ type NICsClient struct {
 
 // List lists all network interfaces on the server.
 // GET /api/v1/project/{project-id}/servers/{svr-id}/nics
-func (c *NICsClient) List(ctx context.Context) ([]*servers.ServerNIC, error) {
+func (c *NICsClient) List(ctx context.Context) (*servers.ServerNICsListResponse, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/nics", c.projectID, c.serverID)
 
 	// Make request
@@ -26,12 +26,12 @@ func (c *NICsClient) List(ctx context.Context) ([]*servers.ServerNIC, error) {
 		Path:   path,
 	}
 
-	var nics []*servers.ServerNIC
-	if err := c.baseClient.Do(ctx, req, &nics); err != nil {
+	var response servers.ServerNICsListResponse
+	if err := c.baseClient.Do(ctx, req, &response); err != nil {
 		return nil, err
 	}
 
-	return nics, nil
+	return &response, nil
 }
 
 // Add attaches a new vNIC to the server.
@@ -94,7 +94,7 @@ func (c *NICsClient) Delete(ctx context.Context, nicID string) error {
 
 // AssociateFloatingIP associates a floating IP to a specific vNIC.
 // POST /api/v1/project/{project-id}/servers/{svr-id}/nics/{nic-id}/floatingip
-func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req *servers.FloatingIPAssociateRequest) error {
+func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*servers.FloatingIPInfo, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/nics/%s/floatingip", c.projectID, c.serverID, nicID)
 
 	// Make request
@@ -104,9 +104,10 @@ func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req 
 		Body:   req,
 	}
 
-	if err := c.baseClient.Do(ctx, httpReq, nil); err != nil {
-		return err
+	var response servers.FloatingIPInfo
+	if err := c.baseClient.Do(ctx, httpReq, &response); err != nil {
+		return nil, err
 	}
 
-	return nil
+	return &response, nil
 }
