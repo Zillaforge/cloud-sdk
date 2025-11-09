@@ -34,6 +34,7 @@ func TestContract_CreateSecurityGroup_Success(t *testing.T) {
 			Description: req.Description,
 			ProjectID:   "proj-1",
 			UserID:      "user-1",
+			Namespace:   "default",
 			Rules:       []securitygroups.SecurityGroupRule{},
 			CreatedAt:   "2024-01-01T00:00:00Z",
 			UpdatedAt:   "2024-01-01T00:00:00Z",
@@ -85,21 +86,22 @@ func TestContract_CreateSecurityGroup_WithRules(t *testing.T) {
 			Description: req.Description,
 			ProjectID:   "proj-1",
 			UserID:      "user-1",
+			Namespace:   "default",
 			Rules: []securitygroups.SecurityGroupRule{
 				{
 					ID:         "rule-1",
-					Direction:  "ingress",
-					Protocol:   "tcp",
-					PortMin:    intPtr(80),
-					PortMax:    intPtr(80),
+					Direction:  securitygroups.DirectionIngress,
+					Protocol:   securitygroups.ProtocolTCP,
+					PortMin:    80,
+					PortMax:    80,
 					RemoteCIDR: "0.0.0.0/0",
 				},
 				{
 					ID:         "rule-2",
-					Direction:  "ingress",
-					Protocol:   "tcp",
-					PortMin:    intPtr(443),
-					PortMax:    intPtr(443),
+					Direction:  securitygroups.DirectionIngress,
+					Protocol:   securitygroups.ProtocolTCP,
+					PortMin:    443,
+					PortMax:    443,
 					RemoteCIDR: "0.0.0.0/0",
 				},
 			},
@@ -121,15 +123,15 @@ func TestContract_CreateSecurityGroup_WithRules(t *testing.T) {
 		Description: "Web server security group",
 		Rules: []securitygroups.SecurityGroupRuleCreateRequest{
 			{
-				Direction:  "ingress",
-				Protocol:   "tcp",
+				Direction:  securitygroups.DirectionIngress,
+				Protocol:   securitygroups.ProtocolTCP,
 				PortMin:    intPtr(80),
 				PortMax:    intPtr(80),
 				RemoteCIDR: "0.0.0.0/0",
 			},
 			{
-				Direction:  "ingress",
-				Protocol:   "tcp",
+				Direction:  securitygroups.DirectionIngress,
+				Protocol:   securitygroups.ProtocolTCP,
 				PortMin:    intPtr(443),
 				PortMax:    intPtr(443),
 				RemoteCIDR: "0.0.0.0/0",
@@ -166,4 +168,9 @@ func TestContract_CreateSecurityGroup_ValidationError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
+}
+
+// intPtr returns a pointer to an int (helper for optional port fields in request models)
+func intPtr(i int) *int {
+	return &i
 }

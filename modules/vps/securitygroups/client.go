@@ -17,6 +17,18 @@ type Client struct {
 	basePath   string
 }
 
+// SecurityGroupResource wraps a SecurityGroup with access to sub-resource operations.
+// It provides the Rules() method to access rule management operations.
+type SecurityGroupResource struct {
+	*securitygroups.SecurityGroup
+	rulesOps *RulesClient
+}
+
+// Rules returns a client for managing rules within this security group.
+func (sgr *SecurityGroupResource) Rules() *RulesClient {
+	return sgr.rulesOps
+}
+
 // NewClient creates a new security groups client.
 func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 	basePath := "/api/v1/project/" + projectID
@@ -84,7 +96,8 @@ func (c *Client) Create(ctx context.Context, req securitygroups.SecurityGroupCre
 
 // Get retrieves details of a specific security group by ID.
 // GET /api/v1/project/{project-id}/security_groups/{sg-id}
-func (c *Client) Get(ctx context.Context, sgID string) (*securitygroups.SecurityGroup, error) {
+// Returns a SecurityGroupResource that provides access to rule management via Rules() method.
+func (c *Client) Get(ctx context.Context, sgID string) (*SecurityGroupResource, error) {
 	path := fmt.Sprintf("%s/security_groups/%s", c.basePath, sgID)
 
 	req := &internalhttp.Request{
@@ -97,7 +110,12 @@ func (c *Client) Get(ctx context.Context, sgID string) (*securitygroups.Security
 		return nil, fmt.Errorf("failed to get security group %s: %w", sgID, err)
 	}
 
-	return &sg, nil
+	// Wrap the security group with rules client
+	rulesClient := NewRulesClient(c.baseClient, c.projectID, sgID)
+	return &SecurityGroupResource{
+		SecurityGroup: &sg,
+		rulesOps:      rulesClient,
+	}, nil
 }
 
 // Update updates security group name and/or description.

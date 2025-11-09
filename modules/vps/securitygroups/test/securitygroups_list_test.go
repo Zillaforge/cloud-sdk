@@ -21,13 +21,14 @@ func TestContract_ListSecurityGroups_Success(t *testing.T) {
 					Description: "Default security group",
 					ProjectID:   "proj-1",
 					UserID:      "user-1",
+					Namespace:   "default",
 					Rules: []securitygroups.SecurityGroupRule{
 						{
 							ID:         "rule-1",
-							Direction:  "ingress",
-							Protocol:   "tcp",
-							PortMin:    intPtr(22),
-							PortMax:    intPtr(22),
+							Direction:  securitygroups.DirectionIngress,
+							Protocol:   securitygroups.ProtocolTCP,
+							PortMin:    22,
+							PortMax:    22,
 							RemoteCIDR: "0.0.0.0/0",
 						},
 					},
@@ -40,6 +41,7 @@ func TestContract_ListSecurityGroups_Success(t *testing.T) {
 					Description: "Web server security group",
 					ProjectID:   "proj-1",
 					UserID:      "user-1",
+					Namespace:   "default",
 					Rules:       []securitygroups.SecurityGroupRule{},
 					CreatedAt:   "2024-01-02T00:00:00Z",
 					UpdatedAt:   "2024-01-02T00:00:00Z",
@@ -95,13 +97,14 @@ func TestContract_ListSecurityGroups_WithFilters(t *testing.T) {
 					Description: "Web server security group",
 					ProjectID:   "proj-1",
 					UserID:      "user-1",
+					Namespace:   "default",
 					Rules: []securitygroups.SecurityGroupRule{
 						{
 							ID:         "rule-2",
-							Direction:  "ingress",
-							Protocol:   "tcp",
-							PortMin:    intPtr(80),
-							PortMax:    intPtr(80),
+							Direction:  securitygroups.DirectionIngress,
+							Protocol:   securitygroups.ProtocolTCP,
+							PortMin:    80,
+							PortMax:    80,
 							RemoteCIDR: "0.0.0.0/0",
 						},
 					},
@@ -177,8 +180,4 @@ func TestContract_ListSecurityGroups_ServerError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-}
-
-func intPtr(i int) *int {
-	return &i
 }

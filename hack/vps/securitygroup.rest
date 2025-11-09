@@ -23,7 +23,8 @@ Authorization: Bearer {{TOKEN}}
 
 ### List Security Group
 # @name SecurityGroupList
-GET {{BASE_URL}}/security_groups HTTP/1.1
+GET {{BASE_URL}}/security_groups
+?detail=true
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 

@@ -43,7 +43,8 @@ type ListSecurityGroupsOptions struct {
 }
 
 // SecurityGroupListResponse represents the response from listing security groups.
+// Note: The Total field has been removed as it is not present in the API specification (pb.SgListOutput).
+// Use len(resp.SecurityGroups) to count results.
 type SecurityGroupListResponse struct {
 	SecurityGroups []SecurityGroup `json:"security_groups"`
-	Total          int             `json:"total"`
 }

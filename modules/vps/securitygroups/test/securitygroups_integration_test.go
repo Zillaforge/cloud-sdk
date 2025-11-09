@@ -32,6 +32,7 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 					Description: "Integration test security group",
 					ProjectID:   "proj-1",
 					UserID:      "user-1",
+					Namespace:   "default",
 					Rules:       sgRules,
 					CreatedAt:   "2024-01-01T00:00:00Z",
 					UpdatedAt:   "2024-01-01T00:00:00Z",
@@ -52,14 +53,19 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 			createdSGID = "sg-integration-test"
 			sgRules = []securitygroups.SecurityGroupRule{}
 			for i, rule := range req.Rules {
-				sgRules = append(sgRules, securitygroups.SecurityGroupRule{
+				ruleResp := securitygroups.SecurityGroupRule{
 					ID:         "rule-" + string(rune('1'+i)),
 					Direction:  rule.Direction,
 					Protocol:   rule.Protocol,
-					PortMin:    rule.PortMin,
-					PortMax:    rule.PortMax,
 					RemoteCIDR: rule.RemoteCIDR,
-				})
+				}
+				if rule.PortMin != nil {
+					ruleResp.PortMin = *rule.PortMin
+				}
+				if rule.PortMax != nil {
+					ruleResp.PortMax = *rule.PortMax
+				}
+				sgRules = append(sgRules, ruleResp)
 			}
 
 			w.WriteHeader(http.StatusCreated)
@@ -69,6 +75,7 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 				Description: req.Description,
 				ProjectID:   "proj-1",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules:       sgRules,
 				CreatedAt:   "2024-01-01T00:00:00Z",
 				UpdatedAt:   "2024-01-01T00:00:00Z",
@@ -85,6 +92,7 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 				Description: "Integration test security group",
 				ProjectID:   "proj-1",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules:       sgRules,
 				CreatedAt:   "2024-01-01T00:00:00Z",
 				UpdatedAt:   "2024-01-01T00:00:00Z",
@@ -116,6 +124,7 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 				Description: desc,
 				ProjectID:   "proj-1",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules:       sgRules,
 				CreatedAt:   "2024-01-01T00:00:00Z",
 				UpdatedAt:   "2024-01-02T00:00:00Z",
@@ -160,8 +169,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 			Description: "Integration test security group",
 			Rules: []securitygroups.SecurityGroupRuleCreateRequest{
 				{
-					Direction:  "egress",
-					Protocol:   "any",
+					Direction:  securitygroups.DirectionEgress,
+					Protocol:   securitygroups.ProtocolAny,
 					RemoteCIDR: "0.0.0.0/0",
 				},
 			},

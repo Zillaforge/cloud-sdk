@@ -34,6 +34,7 @@ func TestContract_UpdateSecurityGroup_Success(t *testing.T) {
 			Description: "Updated description",
 			ProjectID:   "proj-1",
 			UserID:      "user-1",
+			Namespace:   "default",
 			Rules:       []securitygroups.SecurityGroupRule{},
 			CreatedAt:   "2024-01-01T00:00:00Z",
 			UpdatedAt:   "2024-01-02T00:00:00Z",

@@ -40,6 +40,7 @@ func TestClient_List(t *testing.T) {
 				Description: "Default security group",
 				ProjectID:   "proj-123",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules:       []securitygroups.SecurityGroupRule{},
 			},
 			{
@@ -48,10 +49,10 @@ func TestClient_List(t *testing.T) {
 				Description: "Web security group",
 				ProjectID:   "proj-123",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules:       []securitygroups.SecurityGroupRule{},
 			},
 		},
-		Total: 2,
 	}
 
 	expectedPath := "/api/v1/project/proj-123/security_groups"
@@ -83,9 +84,6 @@ func TestClient_List(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response, got nil")
 	}
-	if response.Total != 2 {
-		t.Errorf("expected total 2, got %d", response.Total)
-	}
 	if len(response.SecurityGroups) != 2 {
 		t.Errorf("expected 2 security groups, got %d", len(response.SecurityGroups))
 	}
@@ -101,19 +99,19 @@ func TestClient_List_WithFilters(t *testing.T) {
 				Description: "Web security group",
 				ProjectID:   "proj-123",
 				UserID:      "user-1",
+				Namespace:   "default",
 				Rules: []securitygroups.SecurityGroupRule{
 					{
 						ID:         "rule-1",
-						Direction:  "ingress",
-						Protocol:   "tcp",
-						PortMin:    intPtr(80),
-						PortMax:    intPtr(80),
+						Direction:  securitygroups.DirectionIngress,
+						Protocol:   securitygroups.ProtocolTCP,
+						PortMin:    80,
+						PortMax:    80,
 						RemoteCIDR: "0.0.0.0/0",
 					},
 				},
 			},
 		},
-		Total: 1,
 	}
 
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -263,13 +261,14 @@ func TestClient_Get(t *testing.T) {
 		Description: "My security group",
 		ProjectID:   "proj-123",
 		UserID:      "user-1",
+		Namespace:   "default",
 		Rules: []securitygroups.SecurityGroupRule{
 			{
 				ID:         "rule-1",
-				Direction:  "ingress",
-				Protocol:   "tcp",
-				PortMin:    intPtr(22),
-				PortMax:    intPtr(22),
+				Direction:  securitygroups.DirectionIngress,
+				Protocol:   securitygroups.ProtocolTCP,
+				PortMin:    22,
+				PortMax:    22,
 				RemoteCIDR: "0.0.0.0/0",
 			},
 		},
@@ -307,8 +306,12 @@ func TestClient_Get(t *testing.T) {
 	if response.ID != "sg-123" {
 		t.Errorf("expected ID sg-123, got %s", response.ID)
 	}
-	if len(response.Rules) != 1 {
-		t.Errorf("expected 1 rule, got %d", len(response.Rules))
+	if len(response.SecurityGroup.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(response.SecurityGroup.Rules))
+	}
+	// Verify Rules() method returns a rules client
+	if response.Rules() == nil {
+		t.Error("expected Rules() to return a RulesClient, got nil")
 	}
 }
 
@@ -453,8 +456,4 @@ func TestClient_Delete_Error(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error, got nil")
 	}
-}
-
-func intPtr(i int) *int {
-	return &i
 }

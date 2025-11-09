@@ -23,13 +23,14 @@ func TestContract_GetSecurityGroup_Success(t *testing.T) {
 			Description: "Web server security group",
 			ProjectID:   "proj-1",
 			UserID:      "user-1",
+			Namespace:   "default",
 			Rules: []securitygroups.SecurityGroupRule{
 				{
 					ID:         "rule-1",
-					Direction:  "ingress",
-					Protocol:   "tcp",
-					PortMin:    intPtr(80),
-					PortMax:    intPtr(80),
+					Direction:  securitygroups.DirectionIngress,
+					Protocol:   securitygroups.ProtocolTCP,
+					PortMin:    80,
+					PortMax:    80,
 					RemoteCIDR: "0.0.0.0/0",
 				},
 			},
@@ -59,8 +60,13 @@ func TestContract_GetSecurityGroup_Success(t *testing.T) {
 		t.Errorf("expected name 'web-sg', got %s", result.Name)
 	}
 
-	if len(result.Rules) != 1 {
-		t.Errorf("expected 1 rule, got %d", len(result.Rules))
+	if len(result.SecurityGroup.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(result.SecurityGroup.Rules))
+	}
+
+	// Verify Rules() method returns a rules client
+	if result.Rules() == nil {
+		t.Error("expected Rules() to return a RulesClient, got nil")
 	}
 }
 
