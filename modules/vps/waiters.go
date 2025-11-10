@@ -2,6 +2,7 @@ package vps
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -156,7 +157,8 @@ func WaitForServerDeleted(ctx context.Context, client *servers.Client, serverID 
 		_, err := client.Get(ctx, serverID)
 		if err != nil {
 			// Check if this is an SDKError with 404 status
-			if sdkErr, ok := err.(*types.SDKError); ok && sdkErr.StatusCode == 404 {
+			var sdkErr *types.SDKError
+			if errors.As(err, &sdkErr) && sdkErr.StatusCode == 404 {
 				return true, nil // Server is deleted
 			}
 			// Other errors should be propagated

@@ -61,7 +61,7 @@ func (c *Client) List(ctx context.Context, opts *servers.ServersListRequest) ([]
 
 	var response servers.ServersListResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list servers: %w", err)
 	}
 
 	// Wrap servers in ServerResource
@@ -99,7 +99,7 @@ func (c *Client) Create(ctx context.Context, req *servers.ServerCreateRequest) (
 
 	var server servers.Server
 	if err := c.baseClient.Do(ctx, httpReq, &server); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create server: %w", err)
 	}
 
 	// Wrap in ServerResource with sub-resource operations
@@ -131,7 +131,7 @@ func (c *Client) Get(ctx context.Context, serverID string) (*ServerResource, err
 
 	var server servers.Server
 	if err := c.baseClient.Do(ctx, req, &server); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get server %s: %w", serverID, err)
 	}
 
 	// Wrap in ServerResource with sub-resource operations
@@ -164,7 +164,7 @@ func (c *Client) Update(ctx context.Context, serverID string, req *servers.Serve
 
 	var server servers.Server
 	if err := c.baseClient.Do(ctx, httpReq, &server); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update server %s: %w", serverID, err)
 	}
 
 	// Wrap in ServerResource with sub-resource operations
@@ -195,7 +195,7 @@ func (c *Client) Delete(ctx context.Context, serverID string) error {
 	}
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to delete server %s: %w", serverID, err)
 	}
 
 	return nil
@@ -214,7 +214,7 @@ func (c *Client) Action(ctx context.Context, serverID string, req *servers.Serve
 	}
 
 	if err := c.baseClient.Do(ctx, httpReq, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to perform action on server %s: %w", serverID, err)
 	}
 
 	return nil
@@ -256,7 +256,7 @@ func (c *Client) Metrics(ctx context.Context, serverID string, req *servers.Serv
 
 	var response servers.ServerMetricsResponse
 	if err := c.baseClient.Do(ctx, httpReq, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get metrics for server %s: %w", serverID, err)
 	}
 
 	return &response, nil
@@ -275,7 +275,7 @@ func (c *Client) GetVNCConsoleURL(ctx context.Context, serverID string) (*server
 
 	var response servers.ServerConsoleURLResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get VNC console URL for server %s: %w", serverID, err)
 	}
 
 	return &response, nil

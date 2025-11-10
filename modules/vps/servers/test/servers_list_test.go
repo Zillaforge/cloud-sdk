@@ -3,6 +3,7 @@ package servers_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -207,8 +208,8 @@ func TestServersList_Errors(t *testing.T) {
 				t.Fatal("expected error, got nil")
 			}
 
-			sdkErr, ok := err.(*cloudsdk.SDKError)
-			if !ok {
+			var sdkErr *cloudsdk.SDKError
+			if !errors.As(err, &sdkErr) {
 				t.Fatalf("expected *cloudsdk.SDKError, got %T", err)
 			}
 

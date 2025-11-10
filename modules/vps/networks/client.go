@@ -106,7 +106,7 @@ func (c *Client) Create(ctx context.Context, req *networks.NetworkCreateRequest)
 
 	var network networks.Network
 	if err := c.baseClient.Do(ctx, httpReq, &network); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create network: %w", err)
 	}
 
 	// Wrap in NetworkResource with sub-resource operations
@@ -133,7 +133,7 @@ func (c *Client) Get(ctx context.Context, networkID string) (*NetworkResource, e
 
 	var network networks.Network
 	if err := c.baseClient.Do(ctx, req, &network); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to get network %s: %w", networkID, err)
 	}
 
 	// Wrap in NetworkResource with sub-resource operations
@@ -161,7 +161,7 @@ func (c *Client) Update(ctx context.Context, networkID string, req *networks.Net
 
 	var network networks.Network
 	if err := c.baseClient.Do(ctx, httpReq, &network); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update network %s: %w", networkID, err)
 	}
 
 	// Wrap in NetworkResource with sub-resource operations
@@ -187,7 +187,7 @@ func (c *Client) Delete(ctx context.Context, networkID string) error {
 	}
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to delete network %s: %w", networkID, err)
 	}
 
 	return nil

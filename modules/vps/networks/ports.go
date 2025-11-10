@@ -28,7 +28,7 @@ func (c *PortsClient) List(ctx context.Context) ([]*networks.NetworkPort, error)
 
 	var ports []*networks.NetworkPort
 	if err := c.baseClient.Do(ctx, req, &ports); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list ports for network %s: %w", c.networkID, err)
 	}
 
 	return ports, nil

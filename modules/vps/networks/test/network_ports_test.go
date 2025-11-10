@@ -3,6 +3,7 @@ package networks_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -275,8 +276,8 @@ func TestNetworkPorts_List_Errors(t *testing.T) {
 			}
 
 			// Verify error is SDKError
-			sdkErr, ok := err.(*cloudsdk.SDKError)
-			if !ok {
+			var sdkErr *cloudsdk.SDKError
+			if !errors.As(err, &sdkErr) {
 				t.Fatalf("expected *cloudsdk.SDKError, got %T", err)
 			}
 			if sdkErr.StatusCode != tt.statusCode {

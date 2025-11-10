@@ -28,7 +28,7 @@ func (c *NICsClient) List(ctx context.Context) (*servers.ServerNICsListResponse,
 
 	var response servers.ServerNICsListResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list NICs for server %s: %w", c.serverID, err)
 	}
 
 	return &response, nil
@@ -48,7 +48,7 @@ func (c *NICsClient) Add(ctx context.Context, req *servers.ServerNICCreateReques
 
 	var nic servers.ServerNIC
 	if err := c.baseClient.Do(ctx, httpReq, &nic); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to add NIC to server %s: %w", c.serverID, err)
 	}
 
 	return &nic, nil
@@ -68,7 +68,7 @@ func (c *NICsClient) Update(ctx context.Context, nicID string, req *servers.Serv
 
 	var nic servers.ServerNIC
 	if err := c.baseClient.Do(ctx, httpReq, &nic); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to update NIC %s for server %s: %w", nicID, c.serverID, err)
 	}
 
 	return &nic, nil
@@ -86,7 +86,7 @@ func (c *NICsClient) Delete(ctx context.Context, nicID string) error {
 	}
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to delete NIC %s from server %s: %w", nicID, c.serverID, err)
 	}
 
 	return nil
@@ -106,7 +106,7 @@ func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req 
 
 	var response servers.FloatingIPInfo
 	if err := c.baseClient.Do(ctx, httpReq, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to associate floating IP to NIC %s for server %s: %w", nicID, c.serverID, err)
 	}
 
 	return &response, nil
