@@ -62,20 +62,20 @@ func TestContract_ListSecurityGroups_Success(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(result.SecurityGroups) != 2 {
-		t.Errorf("expected 2 security groups, got %d", len(result.SecurityGroups))
+	if len(result) != 2 {
+		t.Errorf("expected 2 security groups, got %d", len(result))
 	}
 
-	if result.SecurityGroups[0].ID != "sg-123" {
-		t.Errorf("expected ID sg-123, got %s", result.SecurityGroups[0].ID)
+	if result[0].SecurityGroup.ID != "sg-123" {
+		t.Errorf("expected ID sg-123, got %s", result[0].SecurityGroup.ID)
 	}
 
-	if result.SecurityGroups[0].Name != "default" {
-		t.Errorf("expected name 'default', got %s", result.SecurityGroups[0].Name)
+	if result[0].SecurityGroup.Name != "default" {
+		t.Errorf("expected name 'default', got %s", result[0].SecurityGroup.Name)
 	}
 
-	if len(result.SecurityGroups[0].Rules) != 1 {
-		t.Errorf("expected 1 rule, got %d", len(result.SecurityGroups[0].Rules))
+	if len(result[0].SecurityGroup.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(result[0].SecurityGroup.Rules))
 	}
 }
 
@@ -132,12 +132,12 @@ func TestContract_ListSecurityGroups_WithFilters(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(result.SecurityGroups) != 1 {
-		t.Errorf("expected 1 security group, got %d", len(result.SecurityGroups))
+	if len(result) != 1 {
+		t.Errorf("expected 1 security group, got %d", len(result))
 	}
 
-	if result.SecurityGroups[0].Name != "web" {
-		t.Errorf("expected name 'web', got %s", result.SecurityGroups[0].Name)
+	if result[0].SecurityGroup.Name != "web" {
+		t.Errorf("expected name 'web', got %s", result[0].SecurityGroup.Name)
 	}
 }
 
@@ -160,8 +160,8 @@ func TestContract_ListSecurityGroups_EmptyList(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(result.SecurityGroups) != 0 {
-		t.Errorf("expected 0 security groups, got %d", len(result.SecurityGroups))
+	if len(result) != 0 {
+		t.Errorf("expected 0 security groups, got %d", len(result))
 	}
 }
 

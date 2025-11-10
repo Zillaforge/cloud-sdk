@@ -157,8 +157,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list failed: %v", err)
 		}
-		if len(list.SecurityGroups) != 0 {
-			t.Errorf("expected 0 security groups, got %d", len(list.SecurityGroups))
+		if len(list) != 0 {
+			t.Errorf("expected 0 security groups, got %d", len(list))
 		}
 	})
 
@@ -182,8 +182,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 		if sg.ID != "sg-integration-test" {
 			t.Errorf("expected ID sg-integration-test, got %s", sg.ID)
 		}
-		if len(sg.Rules) != 1 {
-			t.Errorf("expected 1 rule, got %d", len(sg.Rules))
+		if len(sg.SecurityGroup.Rules) != 1 {
+			t.Errorf("expected 1 rule, got %d", len(sg.SecurityGroup.Rules))
 		}
 	})
 
@@ -204,8 +204,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list failed: %v", err)
 		}
-		if len(list.SecurityGroups) != 1 {
-			t.Errorf("expected 1 security group, got %d", len(list.SecurityGroups))
+		if len(list) != 1 {
+			t.Errorf("expected 1 security group, got %d", len(list))
 		}
 	})
 
@@ -219,8 +219,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("update failed: %v", err)
 		}
-		if sg.Description != "Updated description" {
-			t.Errorf("expected description 'Updated description', got %s", sg.Description)
+		if sg.SecurityGroup.Description != "Updated description" {
+			t.Errorf("expected description 'Updated description', got %s", sg.SecurityGroup.Description)
 		}
 	})
 
@@ -238,8 +238,8 @@ func TestSecurityGroupsIntegration_FullLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("list failed: %v", err)
 		}
-		if len(list.SecurityGroups) != 0 {
-			t.Errorf("expected 0 security groups after deletion, got %d", len(list.SecurityGroups))
+		if len(list) != 0 {
+			t.Errorf("expected 0 security groups after deletion, got %d", len(list))
 		}
 	})
 }

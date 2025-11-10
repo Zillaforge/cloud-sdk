@@ -41,7 +41,7 @@ func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 
 // List retrieves a list of security groups with optional filtering.
 // GET /api/v1/project/{project-id}/security_groups
-func (c *Client) List(ctx context.Context, opts *securitygroups.ListSecurityGroupsOptions) (*securitygroups.SecurityGroupListResponse, error) {
+func (c *Client) List(ctx context.Context, opts *securitygroups.ListSecurityGroupsOptions) ([]*SecurityGroupResource, error) {
 	path := c.basePath + "/security_groups"
 
 	// Build query parameters
@@ -72,12 +72,21 @@ func (c *Client) List(ctx context.Context, opts *securitygroups.ListSecurityGrou
 		return nil, fmt.Errorf("failed to list security groups: %w", err)
 	}
 
-	return &response, nil
+	// Wrap security groups in SecurityGroupResource
+	sgResources := make([]*SecurityGroupResource, len(response.SecurityGroups))
+	for i, sg := range response.SecurityGroups {
+		sgResources[i] = &SecurityGroupResource{
+			SecurityGroup: &response.SecurityGroups[i],
+			rulesOps:      NewRulesClient(c.baseClient, c.projectID, sg.ID),
+		}
+	}
+
+	return sgResources, nil
 }
 
 // Create creates a new security group.
 // POST /api/v1/project/{project-id}/security_groups
-func (c *Client) Create(ctx context.Context, req securitygroups.SecurityGroupCreateRequest) (*securitygroups.SecurityGroup, error) {
+func (c *Client) Create(ctx context.Context, req securitygroups.SecurityGroupCreateRequest) (*SecurityGroupResource, error) {
 	path := fmt.Sprintf("%s/security_groups", c.basePath)
 
 	httpReq := &internalhttp.Request{
@@ -91,7 +100,12 @@ func (c *Client) Create(ctx context.Context, req securitygroups.SecurityGroupCre
 		return nil, fmt.Errorf("failed to create security group: %w", err)
 	}
 
-	return &sg, nil
+	// Wrap the security group with rules client
+	rulesClient := NewRulesClient(c.baseClient, c.projectID, sg.ID)
+	return &SecurityGroupResource{
+		SecurityGroup: &sg,
+		rulesOps:      rulesClient,
+	}, nil
 }
 
 // Get retrieves details of a specific security group by ID.
@@ -120,7 +134,7 @@ func (c *Client) Get(ctx context.Context, sgID string) (*SecurityGroupResource, 
 
 // Update updates security group name and/or description.
 // PUT /api/v1/project/{project-id}/security_groups/{sg-id}
-func (c *Client) Update(ctx context.Context, sgID string, req securitygroups.SecurityGroupUpdateRequest) (*securitygroups.SecurityGroup, error) {
+func (c *Client) Update(ctx context.Context, sgID string, req securitygroups.SecurityGroupUpdateRequest) (*SecurityGroupResource, error) {
 	path := fmt.Sprintf("%s/security_groups/%s", c.basePath, sgID)
 
 	httpReq := &internalhttp.Request{
@@ -134,7 +148,12 @@ func (c *Client) Update(ctx context.Context, sgID string, req securitygroups.Sec
 		return nil, fmt.Errorf("failed to update security group %s: %w", sgID, err)
 	}
 
-	return &sg, nil
+	// Wrap the security group with rules client
+	rulesClient := NewRulesClient(c.baseClient, c.projectID, sgID)
+	return &SecurityGroupResource{
+		SecurityGroup: &sg,
+		rulesOps:      rulesClient,
+	}, nil
 }
 
 // Delete removes a security group.

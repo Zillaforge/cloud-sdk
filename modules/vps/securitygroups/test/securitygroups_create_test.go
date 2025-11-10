@@ -144,8 +144,8 @@ func TestContract_CreateSecurityGroup_WithRules(t *testing.T) {
 		t.Fatalf("expected no error, got %v", err)
 	}
 
-	if len(result.Rules) != 2 {
-		t.Errorf("expected 2 rules, got %d", len(result.Rules))
+	if len(result.SecurityGroup.Rules) != 2 {
+		t.Errorf("expected 2 rules, got %d", len(result.SecurityGroup.Rules))
 	}
 }
 

@@ -84,8 +84,8 @@ func TestClient_List(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response, got nil")
 	}
-	if len(response.SecurityGroups) != 2 {
-		t.Errorf("expected 2 security groups, got %d", len(response.SecurityGroups))
+	if len(response) != 2 {
+		t.Errorf("expected 2 security groups, got %d", len(response))
 	}
 }
 
@@ -150,11 +150,11 @@ func TestClient_List_WithFilters(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(response.SecurityGroups) != 1 {
-		t.Errorf("expected 1 security group, got %d", len(response.SecurityGroups))
+	if len(response) != 1 {
+		t.Errorf("expected 1 security group, got %d", len(response))
 	}
-	if len(response.SecurityGroups[0].Rules) != 1 {
-		t.Errorf("expected 1 rule, got %d", len(response.SecurityGroups[0].Rules))
+	if len(response[0].SecurityGroup.Rules) != 1 {
+		t.Errorf("expected 1 rule, got %d", len(response[0].SecurityGroup.Rules))
 	}
 }
 
@@ -222,11 +222,11 @@ func TestClient_Create(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response, got nil")
 	}
-	if response.ID != "sg-new" {
-		t.Errorf("expected ID sg-new, got %s", response.ID)
+	if response.SecurityGroup.ID != "sg-new" {
+		t.Errorf("expected ID sg-new, got %s", response.SecurityGroup.ID)
 	}
-	if response.Name != "my-sg" {
-		t.Errorf("expected name my-sg, got %s", response.Name)
+	if response.SecurityGroup.Name != "my-sg" {
+		t.Errorf("expected name my-sg, got %s", response.SecurityGroup.Name)
 	}
 }
 
@@ -381,8 +381,8 @@ func TestClient_Update(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response, got nil")
 	}
-	if response.Name != "updated-sg" {
-		t.Errorf("expected name updated-sg, got %s", response.Name)
+	if response.SecurityGroup.Name != "updated-sg" {
+		t.Errorf("expected name updated-sg, got %s", response.SecurityGroup.Name)
 	}
 }
 
