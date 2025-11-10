@@ -1,5 +1,7 @@
 package servers
 
+import "github.com/Zillaforge/cloud-sdk/models/vps/common"
+
 // ServerStatus represents the status of a server.
 type ServerStatus string
 
@@ -13,12 +15,6 @@ const (
 	ServerStatusDeleted   ServerStatus = "DELETED"
 	ServerStatusSuspended ServerStatus = "SUSPENDED"
 )
-
-// IDName represents an entity with ID and Name.
-type IDName struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
 
 // FlavorInfo contains detailed flavor information.
 type FlavorInfo struct {
@@ -45,16 +41,16 @@ type Server struct {
 	Status       ServerStatus      `json:"status"`
 	StatusReason string            `json:"status_reason,omitempty"`
 	FlavorID     string            `json:"flavor_id"`
-	Flavor       *IDName           `json:"flavor,omitempty"`
+	Flavor       *common.IDName    `json:"flavor,omitempty"`
 	FlavorDetail *FlavorInfo       `json:"flavor_detail,omitempty"`
 	ImageID      string            `json:"image_id"`
 	Image        *VRMImgInfo       `json:"image,omitempty"`
 	ProjectID    string            `json:"project_id"`
-	Project      *IDName           `json:"project,omitempty"`
+	Project      *common.IDName    `json:"project,omitempty"`
 	UserID       string            `json:"user_id,omitempty"`
-	User         *IDName           `json:"user,omitempty"`
+	User         *common.IDName    `json:"user,omitempty"`
 	KeypairID    string            `json:"keypair_id,omitempty"`
-	Keypair      *IDName           `json:"keypair,omitempty"`
+	Keypair      *common.IDName    `json:"keypair,omitempty"`
 	Metadatas    map[string]string `json:"metadatas,omitempty"`
 	PrivateIPs   []string          `json:"private_ips,omitempty"`
 	PublicIPs    []string          `json:"public_ips,omitempty"`

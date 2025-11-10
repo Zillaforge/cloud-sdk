@@ -11,6 +11,7 @@ import (
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/flavors"
+	"github.com/Zillaforge/cloud-sdk/models/vps/keypairs"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
@@ -124,12 +125,20 @@ func main() {
 	encodedPassword := base64.StdEncoding.EncodeToString([]byte(os.Getenv("VM_PASSWORD")))
 	log.Printf("Encoded Password: %s", encodedPassword)
 
+	key, err := vpsClient.Keypairs().Create(ctx, &keypairs.KeypairCreateRequest{
+		Name: "test-key",
+	})
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Step 5: Create Server using information from Steps 1-4
 	req := &servers.ServerCreateRequest{
-		Name:     "test-server",
-		FlavorID: firstFlavorID,
-		ImageID:  hardcodeImageId,
-		Password: encodedPassword,
+		Name:      "test-server",
+		FlavorID:  firstFlavorID,
+		ImageID:   hardcodeImageId,
+		Password:  encodedPassword,
+		KeypairID: key.ID,
 		NICs: []servers.ServerNICCreateRequest{
 			{
 				NetworkID: defaultNetworkId,

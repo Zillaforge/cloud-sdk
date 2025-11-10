@@ -60,12 +60,6 @@ type RouterListResponse struct {
 	Total   int      `json:"total"`
 }
 
-// IDName is a helper struct for nested ID/Name pairs in responses.
-type IDName struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-}
-
 // RouterResource wraps a Router with a method to access network operations.
 // The Networks() accessor must be injected by the client that creates this resource.
 type RouterResource struct {

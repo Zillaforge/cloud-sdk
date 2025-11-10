@@ -28,7 +28,7 @@ func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 
 // List retrieves a list of keypairs with optional filtering.
 // GET /api/v1/project/{project-id}/keypairs
-func (c *Client) List(ctx context.Context, opts *keypairs.ListKeypairsOptions) (*keypairs.KeypairListResponse, error) {
+func (c *Client) List(ctx context.Context, opts *keypairs.ListKeypairsOptions) ([]*keypairs.Keypair, error) {
 	path := c.basePath + "/keypairs"
 
 	// Build query parameters
@@ -53,7 +53,13 @@ func (c *Client) List(ctx context.Context, opts *keypairs.ListKeypairsOptions) (
 		return nil, fmt.Errorf("failed to list keypairs: %w", err)
 	}
 
-	return &response, nil
+	// Convert slice of values to slice of pointers for direct access
+	keypairs := make([]*keypairs.Keypair, len(response.Keypairs))
+	for i := range response.Keypairs {
+		keypairs[i] = &response.Keypairs[i]
+	}
+
+	return keypairs, nil
 }
 
 // Create creates a new keypair.

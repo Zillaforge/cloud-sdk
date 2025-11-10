@@ -1,6 +1,8 @@
 // Package securitygroups provides data structures for VPS security group resources.
 package securitygroups
 
+import "github.com/Zillaforge/cloud-sdk/models/vps/common"
+
 // SecurityGroup represents a security group in the VPS service.
 type SecurityGroup struct {
 	ID          string              `json:"id"`
@@ -12,14 +14,8 @@ type SecurityGroup struct {
 	Rules       []SecurityGroupRule `json:"rules"`
 	CreatedAt   string              `json:"createdAt"`
 	UpdatedAt   string              `json:"updatedAt"`
-	Project     *IDName             `json:"project,omitempty"`
-	User        *IDName             `json:"user,omitempty"`
-}
-
-// IDName represents a simple ID and name pair.
-type IDName struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	Project     *common.IDName      `json:"project,omitempty"`
+	User        *common.IDName      `json:"user,omitempty"`
 }
 
 // SecurityGroupCreateRequest represents the request body for creating a security group.

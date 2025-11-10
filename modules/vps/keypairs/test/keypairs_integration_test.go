@@ -167,7 +167,6 @@ func TestKeypairsIntegration_ListAndFilter(t *testing.T) {
 					{ID: "key-2", Name: "keypair-two", Description: "Second keypair"},
 					{ID: "key-3", Name: "special-keypair", Description: "Special keypair"},
 				},
-				Total: 3,
 			}
 		} else if nameFilter == "special" {
 			// Return filtered keypairs
@@ -175,7 +174,6 @@ func TestKeypairsIntegration_ListAndFilter(t *testing.T) {
 				Keypairs: []keypairs.Keypair{
 					{ID: "key-3", Name: "special-keypair", Description: "Special keypair"},
 				},
-				Total: 1,
 			}
 		}
 
@@ -192,15 +190,13 @@ func TestKeypairsIntegration_ListAndFilter(t *testing.T) {
 
 	// Test 1: List all keypairs
 	t.Run("ListAll", func(t *testing.T) {
-		response, err := keypairsClient.List(ctx, nil)
+		result, err := keypairsClient.List(ctx, nil)
 		if err != nil {
 			t.Fatalf("failed to list keypairs: %v", err)
 		}
-		if response.Total != 3 {
-			t.Errorf("expected 3 keypairs, got %d", response.Total)
-		}
-		if len(response.Keypairs) != 3 {
-			t.Errorf("expected 3 keypairs in list, got %d", len(response.Keypairs))
+		// Use len() to count keypairs (no Total field)
+		if len(result) != 3 {
+			t.Errorf("expected 3 keypairs, got %d", len(result))
 		}
 	})
 
@@ -209,18 +205,16 @@ func TestKeypairsIntegration_ListAndFilter(t *testing.T) {
 		opts := &keypairs.ListKeypairsOptions{
 			Name: "special",
 		}
-		response, err := keypairsClient.List(ctx, opts)
+		result, err := keypairsClient.List(ctx, opts)
 		if err != nil {
 			t.Fatalf("failed to list filtered keypairs: %v", err)
 		}
-		if response.Total != 1 {
-			t.Errorf("expected 1 keypair, got %d", response.Total)
+		// Use len() to count keypairs (no Total field)
+		if len(result) != 1 {
+			t.Errorf("expected 1 keypair, got %d", len(result))
 		}
-		if len(response.Keypairs) != 1 {
-			t.Errorf("expected 1 keypair in list, got %d", len(response.Keypairs))
-		}
-		if response.Keypairs[0].Name != "special-keypair" {
-			t.Errorf("expected name special-keypair, got %s", response.Keypairs[0].Name)
+		if result[0].Name != "special-keypair" {
+			t.Errorf("expected name special-keypair, got %s", result[0].Name)
 		}
 	})
 }

@@ -42,7 +42,7 @@ func TestKeypairsList_Success(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		response := &keypairs.KeypairListResponse{Keypairs: mockKeypairs, Total: len(mockKeypairs)}
+		response := &keypairs.KeypairListResponse{Keypairs: mockKeypairs}
 		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
@@ -52,16 +52,16 @@ func TestKeypairsList_Success(t *testing.T) {
 	keypairsClient := vpsClient.Keypairs()
 
 	ctx := context.Background()
-	resp, err := keypairsClient.List(ctx, nil)
+	result, err := keypairsClient.List(ctx, nil)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Keypairs) != 2 {
-		t.Errorf("expected 2 keypairs, got %d", len(resp.Keypairs))
+	if len(result) != 2 {
+		t.Errorf("expected 2 keypairs, got %d", len(result))
 	}
-	if resp.Keypairs[0].Name != "my-keypair" {
-		t.Errorf("expected name my-keypair, got %s", resp.Keypairs[0].Name)
+	if result[0].Name != "my-keypair" {
+		t.Errorf("expected name my-keypair, got %s", result[0].Name)
 	}
 }
 
@@ -88,7 +88,7 @@ func TestKeypairsList_WithFilter(t *testing.T) {
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		response := &keypairs.KeypairListResponse{Keypairs: []keypairs.Keypair{mockKeypair}, Total: 1}
+		response := &keypairs.KeypairListResponse{Keypairs: []keypairs.Keypair{mockKeypair}}
 		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
@@ -99,13 +99,13 @@ func TestKeypairsList_WithFilter(t *testing.T) {
 
 	ctx := context.Background()
 	opts := &keypairs.ListKeypairsOptions{Name: "my-keypair"}
-	resp, err := keypairsClient.List(ctx, opts)
+	result, err := keypairsClient.List(ctx, opts)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Keypairs) != 1 {
-		t.Errorf("expected 1 keypair, got %d", len(resp.Keypairs))
+	if len(result) != 1 {
+		t.Errorf("expected 1 keypair, got %d", len(result))
 	}
 }
 
@@ -114,7 +114,7 @@ func TestKeypairsList_Empty(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		response := &keypairs.KeypairListResponse{Keypairs: []keypairs.Keypair{}, Total: 0}
+		response := &keypairs.KeypairListResponse{Keypairs: []keypairs.Keypair{}}
 		_ = json.NewEncoder(w).Encode(response)
 	}))
 	defer server.Close()
@@ -124,13 +124,13 @@ func TestKeypairsList_Empty(t *testing.T) {
 	keypairsClient := vpsClient.Keypairs()
 
 	ctx := context.Background()
-	resp, err := keypairsClient.List(ctx, nil)
+	result, err := keypairsClient.List(ctx, nil)
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if len(resp.Keypairs) != 0 {
-		t.Errorf("expected 0 keypairs, got %d", len(resp.Keypairs))
+	if len(result) != 0 {
+		t.Errorf("expected 0 keypairs, got %d", len(result))
 	}
 }
 

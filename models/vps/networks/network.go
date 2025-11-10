@@ -1,5 +1,7 @@
 package networks
 
+import "github.com/Zillaforge/cloud-sdk/models/vps/common"
+
 // Network represents a virtual network in the VPS infrastructure.
 // Swagger reference: pb.NetworkInfo
 type Network struct {
@@ -10,28 +12,22 @@ type Network struct {
 	Bonding     bool   `json:"bonding,omitempty"`
 	Gateway     string `json:"gateway,omitempty"`
 	// Deprecated: Marked as deprecated in the upstream pb.NetworkInfo contract.
-	GWState      bool        `json:"gw_state,omitempty"`
-	IsDefault    bool        `json:"is_default,omitempty"`
-	Nameservers  []string    `json:"nameservers,omitempty"`
-	Namespace    string      `json:"namespace,omitempty"`
-	Project      *IDName     `json:"project,omitempty"`
-	ProjectID    string      `json:"project_id,omitempty"`
-	Router       *RouterInfo `json:"router,omitempty"`
-	RouterID     string      `json:"router_id,omitempty"`
-	Shared       bool        `json:"shared,omitempty"`
-	Status       string      `json:"status,omitempty"`
-	StatusReason string      `json:"status_reason,omitempty"`
-	SubnetID     string      `json:"subnet_id,omitempty"`
-	User         *IDName     `json:"user,omitempty"`
-	UserID       string      `json:"user_id,omitempty"`
-	CreatedAt    string      `json:"createdAt"`
-	UpdatedAt    string      `json:"updatedAt,omitempty"`
-}
-
-// IDName is a reusable nested identifier/name pair.
-type IDName struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
+	GWState      bool           `json:"gw_state,omitempty"`
+	IsDefault    bool           `json:"is_default,omitempty"`
+	Nameservers  []string       `json:"nameservers,omitempty"`
+	Namespace    string         `json:"namespace,omitempty"`
+	Project      *common.IDName `json:"project,omitempty"`
+	ProjectID    string         `json:"project_id,omitempty"`
+	Router       *RouterInfo    `json:"router,omitempty"`
+	RouterID     string         `json:"router_id,omitempty"`
+	Shared       bool           `json:"shared,omitempty"`
+	Status       string         `json:"status,omitempty"`
+	StatusReason string         `json:"status_reason,omitempty"`
+	SubnetID     string         `json:"subnet_id,omitempty"`
+	User         *common.IDName `json:"user,omitempty"`
+	UserID       string         `json:"user_id,omitempty"`
+	CreatedAt    string         `json:"createdAt"`
+	UpdatedAt    string         `json:"updatedAt,omitempty"`
 }
 
 // ExtNetworkInfo represents the external network summary embedded in router info.
@@ -59,9 +55,9 @@ type RouterInfo struct {
 	Status       string          `json:"status,omitempty"`
 	StatusReason string          `json:"status_reason,omitempty"`
 	Namespace    string          `json:"namespace,omitempty"`
-	Project      *IDName         `json:"project,omitempty"`
+	Project      *common.IDName  `json:"project,omitempty"`
 	ProjectID    string          `json:"project_id,omitempty"`
-	User         *IDName         `json:"user,omitempty"`
+	User         *common.IDName  `json:"user,omitempty"`
 	UserID       string          `json:"user_id,omitempty"`
 	ExtNetwork   *ExtNetworkInfo `json:"extnetwork,omitempty"`
 	ExtNetworkID string          `json:"extnetwork_id,omitempty"`
