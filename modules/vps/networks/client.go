@@ -3,6 +3,8 @@ package networks
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
@@ -12,45 +14,57 @@ import (
 type Client struct {
 	baseClient *internalhttp.Client
 	projectID  string
+	basePath   string
 }
 
 // NewClient creates a new networks client.
 func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
+	basePath := "/api/v1/project/" + projectID
 	return &Client{
 		baseClient: baseClient,
 		projectID:  projectID,
+		basePath:   basePath,
 	}
 }
 
 // List retrieves all networks for the project with optional filters.
 // GET /api/v1/project/{project-id}/networks
-func (c *Client) List(ctx context.Context, opts *networks.ListNetworksOptions) (*networks.NetworkListResponse, error) {
-	path := fmt.Sprintf("/api/v1/project/%s/networks", c.projectID)
+func (c *Client) List(ctx context.Context, opts *networks.ListNetworksOptions) ([]*NetworkResource, error) {
+	path := c.basePath + "/networks"
 
 	// Build query parameters
+	query := url.Values{}
+	var queryParts []string
 	if opts != nil {
-		queryParams := []string{}
 		if opts.Name != "" {
-			queryParams = append(queryParams, fmt.Sprintf("name=%s", opts.Name))
+			query.Set("name", opts.Name)
+			queryParts = append(queryParts, "name="+opts.Name)
 		}
 		if opts.UserID != "" {
-			queryParams = append(queryParams, fmt.Sprintf("user_id=%s", opts.UserID))
+			query.Set("user_id", opts.UserID)
+			queryParts = append(queryParts, "user_id="+opts.UserID)
 		}
 		if opts.Status != "" {
-			queryParams = append(queryParams, fmt.Sprintf("status=%s", opts.Status))
+			query.Set("status", opts.Status)
+			queryParts = append(queryParts, "status="+opts.Status)
 		}
 		if opts.RouterID != "" {
-			queryParams = append(queryParams, fmt.Sprintf("router_id=%s", opts.RouterID))
+			query.Set("router_id", opts.RouterID)
+			queryParts = append(queryParts, "router_id="+opts.RouterID)
 		}
 		if opts.Detail != nil {
-			queryParams = append(queryParams, fmt.Sprintf("detail=%t", *opts.Detail))
-		}
-		if len(queryParams) > 0 {
-			path = fmt.Sprintf("%s?%s", path, joinQueryParams(queryParams))
+			if *opts.Detail {
+				queryParts = append(queryParts, "detail=true")
+			} else {
+				queryParts = append(queryParts, "detail=false")
+			}
 		}
 	}
 
-	// Make request
+	if len(queryParts) > 0 {
+		path += "?" + strings.Join(queryParts, "&")
+	}
+
 	req := &internalhttp.Request{
 		Method:  "GET",
 		Path:    path,
@@ -59,27 +73,28 @@ func (c *Client) List(ctx context.Context, opts *networks.ListNetworksOptions) (
 
 	var response networks.NetworkListResponse
 	if err := c.baseClient.Do(ctx, req, &response); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to list networks: %w", err)
 	}
 
-	return &response, nil
-}
-
-// joinQueryParams joins query parameters with "&" separator.
-func joinQueryParams(params []string) string {
-	result := ""
-	for i, param := range params {
-		if i > 0 {
-			result += "&"
+	// Wrap networks in NetworkResource
+	networkResources := make([]*NetworkResource, len(response.Networks))
+	for i, network := range response.Networks {
+		networkResources[i] = &NetworkResource{
+			Network: network,
+			portOps: &PortsClient{
+				baseClient: c.baseClient,
+				projectID:  c.projectID,
+				networkID:  network.ID,
+			},
 		}
-		result += param
 	}
-	return result
+
+	return networkResources, nil
 }
 
 // Create creates a new network.
 // POST /api/v1/project/{project-id}/networks
-func (c *Client) Create(ctx context.Context, req *networks.NetworkCreateRequest) (*networks.Network, error) {
+func (c *Client) Create(ctx context.Context, req *networks.NetworkCreateRequest) (*NetworkResource, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/networks", c.projectID)
 
 	// Make request
@@ -94,7 +109,15 @@ func (c *Client) Create(ctx context.Context, req *networks.NetworkCreateRequest)
 		return nil, err
 	}
 
-	return &network, nil
+	// Wrap in NetworkResource with sub-resource operations
+	return &NetworkResource{
+		Network: &network,
+		portOps: &PortsClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			networkID:  network.ID,
+		},
+	}, nil
 }
 
 // Get retrieves a specific network with sub-resource operations.
@@ -126,7 +149,7 @@ func (c *Client) Get(ctx context.Context, networkID string) (*NetworkResource, e
 
 // Update updates network name/description.
 // PUT /api/v1/project/{project-id}/networks/{net-id}
-func (c *Client) Update(ctx context.Context, networkID string, req *networks.NetworkUpdateRequest) (*networks.Network, error) {
+func (c *Client) Update(ctx context.Context, networkID string, req *networks.NetworkUpdateRequest) (*NetworkResource, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/networks/%s", c.projectID, networkID)
 
 	// Make request
@@ -141,7 +164,15 @@ func (c *Client) Update(ctx context.Context, networkID string, req *networks.Net
 		return nil, err
 	}
 
-	return &network, nil
+	// Wrap in NetworkResource with sub-resource operations
+	return &NetworkResource{
+		Network: &network,
+		portOps: &PortsClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			networkID:  networkID,
+		},
+	}, nil
 }
 
 // Delete deletes a network.

@@ -137,15 +137,15 @@ func TestNetworkLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Step 1 failed - create network: %v", err)
 	}
-	assertStringField(t, network, "ID", createdNetworkID)
-	assertStringField(t, network, "Name", "integration-test-network")
-	assertStringField(t, network, "Gateway", "10.42.0.1")
-	assertStringSliceField(t, network, "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
-	project := requirePointerStructField(t, network, "Project")
+	assertStringField(t, network.Network, "ID", createdNetworkID)
+	assertStringField(t, network.Network, "Name", "integration-test-network")
+	assertStringField(t, network.Network, "Gateway", "10.42.0.1")
+	assertStringSliceField(t, network.Network, "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
+	project := requirePointerStructField(t, network.Network, "Project")
 	assertStringField(t, project.Interface(), "ID", "proj-001")
-	router := requirePointerStructField(t, network, "Router")
+	router := requirePointerStructField(t, network.Network, "Router")
 	assertStringField(t, router.Interface(), "ID", "router-123")
-	t.Logf("✓ Network created with ID: %s", network.ID)
+	t.Logf("✓ Network created with ID: %s", network.Network.ID)
 
 	// Step 2: Get network
 	t.Log("Step 2: Retrieving network...")
@@ -169,10 +169,10 @@ func TestNetworkLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Step 3 failed - update network: %v", err)
 	}
-	assertStringField(t, updatedNetwork, "Name", "updated-integration-network")
-	assertStringField(t, updatedNetwork, "Description", "Updated description")
-	assertStringField(t, updatedNetwork, "RouterID", "router-123")
-	t.Logf("✓ Network updated: %s", updatedNetwork.Name)
+	assertStringField(t, updatedNetwork.Network, "Name", "updated-integration-network")
+	assertStringField(t, updatedNetwork.Network, "Description", "Updated description")
+	assertStringField(t, updatedNetwork.Network, "RouterID", "router-123")
+	t.Logf("✓ Network updated: %s", updatedNetwork.Network.Name)
 
 	// Step 4: List ports on network
 	t.Log("Step 4: Listing network ports...")

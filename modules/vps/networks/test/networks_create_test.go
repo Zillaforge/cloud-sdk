@@ -10,6 +10,7 @@ import (
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
+	networksmod "github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 )
 
 // TestNetworksCreate_Success verifies successful network creation
@@ -19,7 +20,7 @@ func TestNetworksCreate_Success(t *testing.T) {
 		request         *networks.NetworkCreateRequest
 		mockResponse    interface{}
 		validateRequest func(*testing.T, map[string]interface{})
-		validateResult  func(*testing.T, *networks.Network)
+		validateResult  func(*testing.T, *networksmod.NetworkResource)
 	}{
 		{
 			name: "create network with all fields",
@@ -58,21 +59,21 @@ func TestNetworksCreate_Success(t *testing.T) {
 					t.Errorf("expected router_id 'router-abc', got '%v'", reqBody["router_id"])
 				}
 			},
-			validateResult: func(t *testing.T, network *networks.Network) {
-				if network.ID != "net-123" {
-					t.Errorf("expected ID 'net-123', got '%s'", network.ID)
+			validateResult: func(t *testing.T, network *networksmod.NetworkResource) {
+				if network.Network.ID != "net-123" {
+					t.Errorf("expected ID 'net-123', got '%s'", network.Network.ID)
 				}
-				if network.Name != "test-network" {
-					t.Errorf("expected name 'test-network', got '%s'", network.Name)
+				if network.Network.Name != "test-network" {
+					t.Errorf("expected name 'test-network', got '%s'", network.Network.Name)
 				}
-				if network.CIDR != "10.0.0.0/24" {
-					t.Errorf("expected CIDR '10.0.0.0/24', got '%s'", network.CIDR)
+				if network.Network.CIDR != "10.0.0.0/24" {
+					t.Errorf("expected CIDR '10.0.0.0/24', got '%s'", network.Network.CIDR)
 				}
-				if network.Gateway != "10.0.0.1" {
-					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Gateway)
+				if network.Network.Gateway != "10.0.0.1" {
+					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Network.Gateway)
 				}
-				if network.RouterID != "router-abc" {
-					t.Errorf("expected router_id 'router-abc', got '%s'", network.RouterID)
+				if network.Network.RouterID != "router-abc" {
+					t.Errorf("expected router_id 'router-abc', got '%s'", network.Network.RouterID)
 				}
 			},
 		},
@@ -104,18 +105,18 @@ func TestNetworksCreate_Success(t *testing.T) {
 					t.Errorf("unexpected router_id field present: %v", reqBody["router_id"])
 				}
 			},
-			validateResult: func(t *testing.T, network *networks.Network) {
-				if network.Name != "minimal-network" {
-					t.Errorf("expected name 'minimal-network', got '%s'", network.Name)
+			validateResult: func(t *testing.T, network *networksmod.NetworkResource) {
+				if network.Network.Name != "minimal-network" {
+					t.Errorf("expected name 'minimal-network', got '%s'", network.Network.Name)
 				}
-				if network.Description != "" {
-					t.Errorf("expected empty description, got '%s'", network.Description)
+				if network.Network.Description != "" {
+					t.Errorf("expected empty description, got '%s'", network.Network.Description)
 				}
-				if network.Gateway != "" {
-					t.Errorf("expected empty gateway, got '%s'", network.Gateway)
+				if network.Network.Gateway != "" {
+					t.Errorf("expected empty gateway, got '%s'", network.Network.Gateway)
 				}
-				if network.RouterID != "" {
-					t.Errorf("expected empty router_id, got '%s'", network.RouterID)
+				if network.Network.RouterID != "" {
+					t.Errorf("expected empty router_id, got '%s'", network.Network.RouterID)
 				}
 			},
 		},

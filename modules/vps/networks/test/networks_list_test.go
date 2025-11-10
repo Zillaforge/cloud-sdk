@@ -3,12 +3,14 @@ package networks_test
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
+	networksmod "github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 )
 
 // TestNetworksList_Success verifies successful network listing
@@ -31,7 +33,7 @@ func TestNetworksList_Success(t *testing.T) {
 		mockResponse   interface{}
 		expectedCount  int
 		opts           *networks.ListNetworksOptions
-		validateResult func(*testing.T, *networks.NetworkListResponse)
+		validateResult func(*testing.T, []*networksmod.NetworkResource)
 	}{
 		{
 			name: "list all networks",
@@ -52,23 +54,23 @@ func TestNetworksList_Success(t *testing.T) {
 			},
 			expectedCount: 2,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *networks.NetworkListResponse) {
-				if len(resp.Networks) != 2 {
-					t.Errorf("expected 2 networks, got %d", len(resp.Networks))
+			validateResult: func(t *testing.T, resp []*networksmod.NetworkResource) {
+				if len(resp) != 2 {
+					t.Errorf("expected 2 networks, got %d", len(resp))
 				}
 
-				assertStringField(t, resp.Networks[0], "ID", "net-1")
-				assertStringField(t, resp.Networks[0], "Gateway", "10.42.0.1")
-				assertStringSliceField(t, resp.Networks[0], "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
+				assertStringField(t, resp[0].Network, "ID", "net-1")
+				assertStringField(t, resp[0].Network, "Gateway", "10.42.0.1")
+				assertStringSliceField(t, resp[0].Network, "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
 
-				router := requirePointerStructField(t, resp.Networks[0], "Router")
+				router := requirePointerStructField(t, resp[0].Network, "Router")
 				assertStringField(t, router.Interface(), "ID", "router-123")
 
-				project := requirePointerStructField(t, resp.Networks[0], "Project")
+				project := requirePointerStructField(t, resp[0].Network, "Project")
 				assertStringField(t, project.Interface(), "ID", "proj-001")
 
-				assertStringField(t, resp.Networks[1], "ID", "net-2")
-				assertStringField(t, resp.Networks[1], "Gateway", "10.0.1.1")
+				assertStringField(t, resp[1].Network, "ID", "net-2")
+				assertStringField(t, resp[1].Network, "Gateway", "10.0.1.1")
 			},
 		},
 		{
@@ -78,9 +80,9 @@ func TestNetworksList_Success(t *testing.T) {
 			},
 			expectedCount: 0,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *networks.NetworkListResponse) {
-				if len(resp.Networks) != 0 {
-					t.Errorf("expected 0 networks, got %d", len(resp.Networks))
+			validateResult: func(t *testing.T, resp []*networksmod.NetworkResource) {
+				if len(resp) != 0 {
+					t.Errorf("expected 0 networks, got %d", len(resp))
 				}
 			},
 		},
@@ -98,12 +100,12 @@ func TestNetworksList_Success(t *testing.T) {
 			opts: &networks.ListNetworksOptions{
 				Name: "filtered-network",
 			},
-			validateResult: func(t *testing.T, resp *networks.NetworkListResponse) {
-				if len(resp.Networks) != 1 {
-					t.Errorf("expected 1 network, got %d", len(resp.Networks))
+			validateResult: func(t *testing.T, resp []*networksmod.NetworkResource) {
+				if len(resp) != 1 {
+					t.Errorf("expected 1 network, got %d", len(resp))
 				}
-				assertStringField(t, resp.Networks[0], "Name", "filtered-network")
-				assertStringSliceField(t, resp.Networks[0], "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
+				assertStringField(t, resp[0].Network, "Name", "filtered-network")
+				assertStringSliceField(t, resp[0].Network, "Nameservers", []string{"1.1.1.1", "8.8.8.8"})
 			},
 		},
 	}
@@ -150,8 +152,8 @@ func TestNetworksList_Success(t *testing.T) {
 			if resp == nil {
 				t.Fatal("expected non-nil response")
 			}
-			if len(resp.Networks) != tt.expectedCount {
-				t.Errorf("expected %d networks, got %d", tt.expectedCount, len(resp.Networks))
+			if len(resp) != tt.expectedCount {
+				t.Errorf("expected %d networks, got %d", tt.expectedCount, len(resp))
 			}
 
 			// Run custom validations
@@ -227,8 +229,8 @@ func TestNetworksList_Errors(t *testing.T) {
 			}
 
 			// Verify error is SDKError
-			sdkErr, ok := err.(*cloudsdk.SDKError)
-			if !ok {
+			var sdkErr *cloudsdk.SDKError
+			if !errors.As(err, &sdkErr) {
 				t.Fatalf("expected *cloudsdk.SDKError, got %T", err)
 			}
 			if sdkErr.StatusCode != tt.statusCode {

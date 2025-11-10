@@ -213,8 +213,8 @@ func TestClient_List(t *testing.T) {
 				t.Fatal("expected result, got nil")
 			}
 
-			if len(result.Networks) != len(tt.mockResponse.Networks) {
-				t.Errorf("expected %d networks, got %d", len(tt.mockResponse.Networks), len(result.Networks))
+			if len(result) != len(tt.mockResponse.Networks) {
+				t.Errorf("expected %d networks, got %d", len(tt.mockResponse.Networks), len(result))
 			}
 		})
 	}

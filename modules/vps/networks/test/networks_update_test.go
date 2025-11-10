@@ -10,6 +10,7 @@ import (
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
+	networksmod "github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 )
 
 // TestNetworksUpdate_Success verifies successful network updates
@@ -20,7 +21,7 @@ func TestNetworksUpdate_Success(t *testing.T) {
 		request         *networks.NetworkUpdateRequest
 		mockResponse    interface{}
 		validateRequest func(*testing.T, map[string]interface{})
-		validateResult  func(*testing.T, *networks.Network)
+		validateResult  func(*testing.T, *networksmod.NetworkResource)
 	}{
 		{
 			name:      "update name and description",
@@ -55,23 +56,23 @@ func TestNetworksUpdate_Success(t *testing.T) {
 					}
 				}
 			},
-			validateResult: func(t *testing.T, network *networks.Network) {
-				if network.Name != "updated-network" {
-					t.Errorf("expected name 'updated-network', got '%s'", network.Name)
+			validateResult: func(t *testing.T, network *networksmod.NetworkResource) {
+				if network.Network.Name != "updated-network" {
+					t.Errorf("expected name 'updated-network', got '%s'", network.Network.Name)
 				}
-				if network.Description != "Updated description" {
-					t.Errorf("expected description 'Updated description', got '%s'", network.Description)
+				if network.Network.Description != "Updated description" {
+					t.Errorf("expected description 'Updated description', got '%s'", network.Network.Description)
 				}
-				if network.Gateway != "10.0.0.1" {
-					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Gateway)
+				if network.Network.Gateway != "10.0.0.1" {
+					t.Errorf("expected gateway '10.0.0.1', got '%s'", network.Network.Gateway)
 				}
-				if network.RouterID != "router-1" {
-					t.Errorf("expected router_id 'router-1', got '%s'", network.RouterID)
+				if network.Network.RouterID != "router-1" {
+					t.Errorf("expected router_id 'router-1', got '%s'", network.Network.RouterID)
 				}
-				if !network.Shared {
+				if !network.Network.Shared {
 					t.Errorf("expected shared to be true")
 				}
-				if network.IsDefault {
+				if network.Network.IsDefault {
 					t.Errorf("expected is_default to remain false")
 				}
 			},
@@ -101,14 +102,14 @@ func TestNetworksUpdate_Success(t *testing.T) {
 					t.Errorf("did not expect router_id in update payload")
 				}
 			},
-			validateResult: func(t *testing.T, network *networks.Network) {
-				if network.Name != "new-name" {
-					t.Errorf("expected name 'new-name', got '%s'", network.Name)
+			validateResult: func(t *testing.T, network *networksmod.NetworkResource) {
+				if network.Network.Name != "new-name" {
+					t.Errorf("expected name 'new-name', got '%s'", network.Network.Name)
 				}
-				if network.Shared {
+				if network.Network.Shared {
 					t.Errorf("expected shared to be false")
 				}
-				if !network.IsDefault {
+				if !network.Network.IsDefault {
 					t.Errorf("expected is_default to be true")
 				}
 			},
