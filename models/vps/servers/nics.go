@@ -57,5 +57,5 @@ type ServerNICsListResponse struct {
 
 // ServerNICAssociateFloatingIPRequest is the body for AssociateFloatingIPToNIC.
 type ServerNICAssociateFloatingIPRequest struct {
-	FIPID string `json:"fip_id"`
+	FIPID string `json:"fip_id,omitempty"`
 }
