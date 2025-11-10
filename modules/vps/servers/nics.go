@@ -17,7 +17,7 @@ type NICsClient struct {
 
 // List lists all network interfaces on the server.
 // GET /api/v1/project/{project-id}/servers/{svr-id}/nics
-func (c *NICsClient) List(ctx context.Context) (*servers.ServerNICsListResponse, error) {
+func (c *NICsClient) List(ctx context.Context) ([]*servers.ServerNIC, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/nics", c.projectID, c.serverID)
 
 	// Make request
@@ -31,7 +31,7 @@ func (c *NICsClient) List(ctx context.Context) (*servers.ServerNICsListResponse,
 		return nil, fmt.Errorf("failed to list NICs for server %s: %w", c.serverID, err)
 	}
 
-	return &response, nil
+	return response.NICs, nil
 }
 
 // Add attaches a new vNIC to the server.

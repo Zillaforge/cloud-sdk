@@ -77,8 +77,8 @@ func TestServerNICs_List_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(response.NICs) != 2 {
-		t.Errorf("expected 2 NICs, got %d", len(response.NICs))
+	if len(response) != 2 {
+		t.Errorf("expected 2 NICs, got %d", len(response))
 	}
 }
 

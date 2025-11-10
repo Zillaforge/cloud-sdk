@@ -29,7 +29,7 @@ func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 
 // List retrieves a list of available flavors with optional filtering.
 // GET /api/v1/project/{project-id}/flavors
-func (c *Client) List(ctx context.Context, opts *flavors.ListFlavorsOptions) (*flavors.FlavorListResponse, error) {
+func (c *Client) List(ctx context.Context, opts *flavors.ListFlavorsOptions) ([]*flavors.Flavor, error) {
 	path := c.basePath + "/flavors"
 
 	// Build query parameters
@@ -64,7 +64,7 @@ func (c *Client) List(ctx context.Context, opts *flavors.ListFlavorsOptions) (*f
 		return nil, fmt.Errorf("failed to list flavors: %w", err)
 	}
 
-	return &response, nil
+	return response.Flavors, nil
 }
 
 // Get retrieves details of a specific flavor by ID.

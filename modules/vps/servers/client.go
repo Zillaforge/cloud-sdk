@@ -300,7 +300,7 @@ func (sr *ServerResource) Volumes() VolumeOperations {
 
 // NICOperations defines operations on server NICs (sub-resource).
 type NICOperations interface {
-	List(ctx context.Context) (*servers.ServerNICsListResponse, error)
+	List(ctx context.Context) ([]*servers.ServerNIC, error)
 	Add(ctx context.Context, req *servers.ServerNICCreateRequest) (*servers.ServerNIC, error)
 	Update(ctx context.Context, nicID string, req *servers.ServerNICUpdateRequest) (*servers.ServerNIC, error)
 	Delete(ctx context.Context, nicID string) error

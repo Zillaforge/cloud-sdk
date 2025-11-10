@@ -152,8 +152,8 @@ func TestFlavorDiscovery(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(resp.Flavors) != len(mockFlavors) {
-			t.Errorf("expected %d flavors, got %d", len(mockFlavors), len(resp.Flavors))
+		if len(resp) != len(mockFlavors) {
+			t.Errorf("expected %d flavors, got %d", len(mockFlavors), len(resp))
 		}
 	})
 
@@ -163,11 +163,11 @@ func TestFlavorDiscovery(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(resp.Flavors) != 1 {
-			t.Errorf("expected 1 flavor, got %d", len(resp.Flavors))
+		if len(resp) != 1 {
+			t.Errorf("expected 1 flavor, got %d", len(resp))
 		}
-		if len(resp.Flavors) > 0 && resp.Flavors[0].Name != "small" {
-			t.Errorf("expected flavor name 'small', got '%s'", resp.Flavors[0].Name)
+		if len(resp) > 0 && resp[0].Name != "small" {
+			t.Errorf("expected flavor name 'small', got '%s'", resp[0].Name)
 		}
 	})
 
@@ -179,10 +179,10 @@ func TestFlavorDiscovery(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		// Should return all public flavors (4 out of 5)
-		if len(resp.Flavors) != 4 {
-			t.Errorf("expected 4 public flavors, got %d", len(resp.Flavors))
+		if len(resp) != 4 {
+			t.Errorf("expected 4 public flavors, got %d", len(resp))
 		}
-		for _, flavor := range resp.Flavors {
+		for _, flavor := range resp {
 			if !flavor.Public {
 				t.Errorf("expected public flavor, got private: %s", flavor.ID)
 			}
@@ -197,11 +197,11 @@ func TestFlavorDiscovery(t *testing.T) {
 			t.Fatalf("unexpected error: %v", err)
 		}
 		// Should return only private flavors (1 out of 5)
-		if len(resp.Flavors) != 1 {
-			t.Errorf("expected 1 private flavor, got %d", len(resp.Flavors))
+		if len(resp) != 1 {
+			t.Errorf("expected 1 private flavor, got %d", len(resp))
 		}
-		if len(resp.Flavors) > 0 && resp.Flavors[0].Public {
-			t.Errorf("expected private flavor, got public: %s", resp.Flavors[0].ID)
+		if len(resp) > 0 && resp[0].Public {
+			t.Errorf("expected private flavor, got public: %s", resp[0].ID)
 		}
 	})
 
@@ -211,12 +211,12 @@ func TestFlavorDiscovery(t *testing.T) {
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
-		if len(resp.Flavors) != 1 {
-			t.Errorf("expected 1 GPU flavor, got %d", len(resp.Flavors))
+		if len(resp) != 1 {
+			t.Errorf("expected 1 GPU flavor, got %d", len(resp))
 		}
-		if len(resp.Flavors) > 0 {
+		if len(resp) > 0 {
 			hasGPUTag := false
-			for _, tag := range resp.Flavors[0].Tags {
+			for _, tag := range resp[0].Tags {
 				if tag == "gpu" {
 					hasGPUTag = true
 					break
@@ -263,7 +263,7 @@ func TestFlavorDiscovery(t *testing.T) {
 
 		// Find the smallest flavor (by VCPU)
 		var smallest *flavors.Flavor
-		for _, flavor := range allFlavors.Flavors {
+		for _, flavor := range allFlavors {
 			if smallest == nil || flavor.VCPU < smallest.VCPU {
 				smallest = flavor
 			}
@@ -278,7 +278,7 @@ func TestFlavorDiscovery(t *testing.T) {
 
 		// Find the largest flavor (by VCPU)
 		var largest *flavors.Flavor
-		for _, flavor := range allFlavors.Flavors {
+		for _, flavor := range allFlavors {
 			if largest == nil || flavor.VCPU > largest.VCPU {
 				largest = flavor
 			}

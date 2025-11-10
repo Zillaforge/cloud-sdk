@@ -142,8 +142,8 @@ func TestFlavorsList_Success(t *testing.T) {
 			if resp == nil {
 				t.Fatal("expected response, got nil")
 			}
-			if len(resp.Flavors) != len(tt.mockFlavors) {
-				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp.Flavors))
+			if len(resp) != len(tt.mockFlavors) {
+				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp))
 			}
 		})
 	}

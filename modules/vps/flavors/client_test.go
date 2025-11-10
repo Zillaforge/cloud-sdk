@@ -135,8 +135,8 @@ func TestClient_List(t *testing.T) {
 			if resp == nil {
 				t.Fatal("expected response, got nil")
 			}
-			if len(resp.Flavors) != len(tt.mockFlavors) {
-				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp.Flavors))
+			if len(resp) != len(tt.mockFlavors) {
+				t.Errorf("expected %d flavors, got %d", len(tt.mockFlavors), len(resp))
 			}
 		})
 	}
@@ -548,12 +548,12 @@ func TestContractFlavorListResponse(t *testing.T) {
 	if response == nil {
 		t.Fatal("expected response, got nil")
 	}
-	if len(response.Flavors) != 2 {
-		t.Fatalf("expected 2 flavors, got %d", len(response.Flavors))
+	if len(response) != 2 {
+		t.Fatalf("expected 2 flavors, got %d", len(response))
 	}
 
 	// Validate first flavor (minimal)
-	f1 := response.Flavors[0]
+	f1 := response[0]
 	if f1.ID != "flavor-1" {
 		t.Errorf("Flavor 1 ID: expected 'flavor-1', got '%s'", f1.ID)
 	}
@@ -565,7 +565,7 @@ func TestContractFlavorListResponse(t *testing.T) {
 	}
 
 	// Validate second flavor (with GPU)
-	f2 := response.Flavors[1]
+	f2 := response[1]
 	if f2.ID != "flavor-2" {
 		t.Errorf("Flavor 2 ID: expected 'flavor-2', got '%s'", f2.ID)
 	}

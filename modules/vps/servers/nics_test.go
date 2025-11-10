@@ -47,8 +47,8 @@ func TestNICsClient_List(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if len(result.NICs) != len(mockResponse.NICs) {
-		t.Errorf("expected %d NICs, got %d", len(mockResponse.NICs), len(result.NICs))
+	if len(result) != len(mockResponse.NICs) {
+		t.Errorf("expected %d NICs, got %d", len(mockResponse.NICs), len(result))
 	}
 }
 
