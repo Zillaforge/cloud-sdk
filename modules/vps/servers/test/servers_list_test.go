@@ -9,6 +9,7 @@ import (
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
+	serversmod "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
 )
 
 // TestServersList_Success verifies successful server listing
@@ -18,7 +19,7 @@ func TestServersList_Success(t *testing.T) {
 		mockResponse   interface{}
 		expectedCount  int
 		opts           *servers.ServersListRequest
-		validateResult func(*testing.T, *servers.ServersListResponse)
+		validateResult func(*testing.T, []*serversmod.ServerResource)
 	}{
 		{
 			name: "list all servers",
@@ -53,12 +54,12 @@ func TestServersList_Success(t *testing.T) {
 			},
 			expectedCount: 2,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
-				if len(resp.Servers) != 2 {
-					t.Errorf("expected 2 servers, got %d", len(resp.Servers))
+			validateResult: func(t *testing.T, resp []*serversmod.ServerResource) {
+				if len(resp) != 2 {
+					t.Errorf("expected 2 servers, got %d", len(resp))
 				}
-				if resp.Servers[0].Name != "web-server" {
-					t.Errorf("expected first server name 'web-server', got '%s'", resp.Servers[0].Name)
+				if resp[0].Name != "web-server" {
+					t.Errorf("expected first server name 'web-server', got '%s'", resp[0].Name)
 				}
 			},
 		},
@@ -83,12 +84,12 @@ func TestServersList_Success(t *testing.T) {
 			opts: &servers.ServersListRequest{
 				Status: "BUILD",
 			},
-			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
-				if len(resp.Servers) != 1 {
-					t.Errorf("expected 1 server, got %d", len(resp.Servers))
+			validateResult: func(t *testing.T, resp []*serversmod.ServerResource) {
+				if len(resp) != 1 {
+					t.Errorf("expected 1 server, got %d", len(resp))
 				}
-				if resp.Servers[0].Status != servers.ServerStatusBuild {
-					t.Errorf("expected status 'BUILD', got '%s'", resp.Servers[0].Status)
+				if resp[0].Status != servers.ServerStatusBuild {
+					t.Errorf("expected status 'BUILD', got '%s'", resp[0].Status)
 				}
 			},
 		},
@@ -99,9 +100,9 @@ func TestServersList_Success(t *testing.T) {
 			},
 			expectedCount: 0,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *servers.ServersListResponse) {
-				if len(resp.Servers) != 0 {
-					t.Errorf("expected 0 servers, got %d", len(resp.Servers))
+			validateResult: func(t *testing.T, resp []*serversmod.ServerResource) {
+				if len(resp) != 0 {
+					t.Errorf("expected 0 servers, got %d", len(resp))
 				}
 			},
 		},

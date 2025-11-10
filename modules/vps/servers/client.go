@@ -24,7 +24,7 @@ func NewClient(baseClient *internalhttp.Client, projectID string) *Client {
 
 // List retrieves all servers for the project with optional filters.
 // GET /api/v1/project/{project-id}/servers
-func (c *Client) List(ctx context.Context, opts *servers.ServersListRequest) (*servers.ServersListResponse, error) {
+func (c *Client) List(ctx context.Context, opts *servers.ServersListRequest) ([]*ServerResource, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers", c.projectID)
 
 	// Build query parameters
@@ -64,12 +64,30 @@ func (c *Client) List(ctx context.Context, opts *servers.ServersListRequest) (*s
 		return nil, err
 	}
 
-	return &response, nil
+	// Wrap servers in ServerResource
+	serverResources := make([]*ServerResource, len(response.Servers))
+	for i, server := range response.Servers {
+		serverResources[i] = &ServerResource{
+			Server: server,
+			nicOps: &NICsClient{
+				baseClient: c.baseClient,
+				projectID:  c.projectID,
+				serverID:   server.ID,
+			},
+			volumeOps: &VolumesClient{
+				baseClient: c.baseClient,
+				projectID:  c.projectID,
+				serverID:   server.ID,
+			},
+		}
+	}
+
+	return serverResources, nil
 }
 
 // Create provisions a new server instance.
 // POST /api/v1/project/{project-id}/servers
-func (c *Client) Create(ctx context.Context, req *servers.ServerCreateRequest) (*servers.Server, error) {
+func (c *Client) Create(ctx context.Context, req *servers.ServerCreateRequest) (*ServerResource, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers", c.projectID)
 
 	// Make request
@@ -84,7 +102,20 @@ func (c *Client) Create(ctx context.Context, req *servers.ServerCreateRequest) (
 		return nil, err
 	}
 
-	return &server, nil
+	// Wrap in ServerResource with sub-resource operations
+	return &ServerResource{
+		Server: &server,
+		nicOps: &NICsClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			serverID:   server.ID,
+		},
+		volumeOps: &VolumesClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			serverID:   server.ID,
+		},
+	}, nil
 }
 
 // Get retrieves a specific server with sub-resource operations.
@@ -121,7 +152,7 @@ func (c *Client) Get(ctx context.Context, serverID string) (*ServerResource, err
 
 // Update modifies server name/description.
 // PUT /api/v1/project/{project-id}/servers/{svr-id}
-func (c *Client) Update(ctx context.Context, serverID string, req *servers.ServerUpdateRequest) (*servers.Server, error) {
+func (c *Client) Update(ctx context.Context, serverID string, req *servers.ServerUpdateRequest) (*ServerResource, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s", c.projectID, serverID)
 
 	// Make request
@@ -136,7 +167,20 @@ func (c *Client) Update(ctx context.Context, serverID string, req *servers.Serve
 		return nil, err
 	}
 
-	return &server, nil
+	// Wrap in ServerResource with sub-resource operations
+	return &ServerResource{
+		Server: &server,
+		nicOps: &NICsClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			serverID:   serverID,
+		},
+		volumeOps: &VolumesClient{
+			baseClient: c.baseClient,
+			projectID:  c.projectID,
+			serverID:   serverID,
+		},
+	}, nil
 }
 
 // Delete removes a server instance.

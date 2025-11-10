@@ -120,10 +120,10 @@ func TestServerLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to create server: %v", err)
 	}
-	if server.ID != serverID {
-		t.Errorf("expected server ID '%s', got '%s'", serverID, server.ID)
+	if server.Server.ID != serverID {
+		t.Errorf("expected server ID '%s', got '%s'", serverID, server.Server.ID)
 	}
-	t.Logf("✓ Server created with ID: %s", server.ID)
+	t.Logf("✓ Server created with ID: %s", server.Server.ID)
 
 	t.Log("Step 2: Getting server...")
 	serverResource, err := vpsClient.Servers().Get(context.Background(), serverID)
@@ -144,8 +144,8 @@ func TestServerLifecycle(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to update server: %v", err)
 	}
-	if updatedServer.Name != "updated-server" {
-		t.Errorf("expected name 'updated-server', got '%s'", updatedServer.Name)
+	if updatedServer.Server.Name != "updated-server" {
+		t.Errorf("expected name 'updated-server', got '%s'", updatedServer.Server.Name)
 	}
 	t.Log("✓ Server updated successfully")
 

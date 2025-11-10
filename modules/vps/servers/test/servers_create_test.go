@@ -61,14 +61,14 @@ func TestServersCreate_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if server.ID != "svr-new" {
-		t.Errorf("expected ID 'svr-new', got '%s'", server.ID)
+	if server.Server.ID != "svr-new" {
+		t.Errorf("expected ID 'svr-new', got '%s'", server.Server.ID)
 	}
-	if server.Name != "new-server" {
-		t.Errorf("expected name 'new-server', got '%s'", server.Name)
+	if server.Server.Name != "new-server" {
+		t.Errorf("expected name 'new-server', got '%s'", server.Server.Name)
 	}
-	if server.Status != "BUILD" {
-		t.Errorf("expected status 'BUILD', got '%s'", server.Status)
+	if server.Server.Status != "BUILD" {
+		t.Errorf("expected status 'BUILD', got '%s'", server.Server.Status)
 	}
 }
 

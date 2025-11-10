@@ -113,8 +113,8 @@ func TestClient_List(t *testing.T) {
 				t.Fatal("expected result, got nil")
 			}
 
-			if len(result.Servers) != len(tt.mockResponse.Servers) {
-				t.Errorf("expected %d servers, got %d", len(tt.mockResponse.Servers), len(result.Servers))
+			if len(result) != len(tt.mockResponse.Servers) {
+				t.Errorf("expected %d servers, got %d", len(tt.mockResponse.Servers), len(result))
 			}
 		})
 	}
@@ -155,8 +155,8 @@ func TestClient_Create(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result.ID != mockResponse.ID {
-		t.Errorf("expected ID %s, got %s", mockResponse.ID, result.ID)
+	if result.Server.ID != mockResponse.ID {
+		t.Errorf("expected ID %s, got %s", mockResponse.ID, result.Server.ID)
 	}
 }
 
@@ -236,8 +236,8 @@ func TestClient_Update(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if result.Name != mockResponse.Name {
-		t.Errorf("expected name %s, got %s", mockResponse.Name, result.Name)
+	if result.Server.Name != mockResponse.Name {
+		t.Errorf("expected name %s, got %s", mockResponse.Name, result.Server.Name)
 	}
 }
 

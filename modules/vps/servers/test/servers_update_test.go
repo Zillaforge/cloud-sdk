@@ -54,11 +54,11 @@ func TestServersUpdate_Success(t *testing.T) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if server.Name != "updated-server" {
-		t.Errorf("expected name 'updated-server', got '%s'", server.Name)
+	if server.Server.Name != "updated-server" {
+		t.Errorf("expected name 'updated-server', got '%s'", server.Server.Name)
 	}
-	if server.Description != "Updated description" {
-		t.Errorf("expected description 'Updated description', got '%s'", server.Description)
+	if server.Server.Description != "Updated description" {
+		t.Errorf("expected description 'Updated description', got '%s'", server.Server.Description)
 	}
 }
 
