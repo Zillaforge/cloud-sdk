@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
+	"github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 )
 
@@ -304,7 +305,7 @@ type NICOperations interface {
 	Add(ctx context.Context, req *servers.ServerNICCreateRequest) (*servers.ServerNIC, error)
 	Update(ctx context.Context, nicID string, req *servers.ServerNICUpdateRequest) (*servers.ServerNIC, error)
 	Delete(ctx context.Context, nicID string) error
-	AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*servers.FloatingIPInfo, error)
+	AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*floatingips.FloatingIP, error)
 }
 
 // VolumeOperations defines operations on server volumes (sub-resource).

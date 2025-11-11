@@ -9,6 +9,7 @@ import (
 	"time"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
+	"github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 )
 
@@ -158,7 +159,7 @@ func TestNICsClient_Delete(t *testing.T) {
 }
 
 func TestNICsClient_AssociateFloatingIP(t *testing.T) {
-	mockResponse := &servers.FloatingIPInfo{
+	mockResponse := &floatingips.FloatingIP{
 		ID:      "fip-1",
 		Address: "203.0.113.10",
 	}

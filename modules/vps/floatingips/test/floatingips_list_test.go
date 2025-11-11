@@ -18,71 +18,82 @@ func TestFloatingIPsList_Success(t *testing.T) {
 		mockResponse   interface{}
 		expectedCount  int
 		opts           *floatingips.ListFloatingIPsOptions
-		validateResult func(*testing.T, *floatingips.FloatingIPListResponse)
+		validateResult func(*testing.T, []*floatingips.FloatingIP)
 	}{
 		{
 			name: "list all floating IPs",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{
+				"floating_ips": []map[string]interface{}{
 					{
-						"id":          "fip-1",
-						"address":     "203.0.113.10",
-						"status":      "ACTIVE",
-						"project_id":  "proj-123",
-						"port_id":     "port-1",
-						"description": "Web server IP",
-						"created_at":  "2025-01-01T00:00:00Z",
+						"id":         "fip-1",
+						"uuid":       "550e8400-e29b-41d4-a716-446655440001",
+						"name":       "web-ip",
+						"address":    "203.0.113.10",
+						"status":     "ACTIVE",
+						"project_id": "proj-123",
+						"user_id":    "user-123",
+						"port_id":    "port-1",
+						"reserved":   false,
+						"createdAt":  "2025-01-01T00:00:00Z",
 					},
 					{
-						"id":          "fip-2",
-						"address":     "203.0.113.11",
-						"status":      "PENDING",
-						"project_id":  "proj-123",
-						"description": "Database IP",
-						"created_at":  "2025-01-02T00:00:00Z",
+						"id":         "fip-2",
+						"uuid":       "550e8400-e29b-41d4-a716-446655440002",
+						"name":       "db-ip",
+						"address":    "203.0.113.11",
+						"status":     "PENDING",
+						"project_id": "proj-123",
+						"user_id":    "user-123",
+						"reserved":   false,
+						"createdAt":  "2025-01-02T00:00:00Z",
 					},
 				},
 			},
 			expectedCount: 2,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *floatingips.FloatingIPListResponse) {
-				if len(resp.Items) != 2 {
-					t.Errorf("expected 2 floating IPs, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, result []*floatingips.FloatingIP) {
+				if len(result) != 2 {
+					t.Errorf("expected 2 floating IPs, got %d", len(result))
+					return
 				}
-				if resp.Items[0].Address != "203.0.113.10" {
-					t.Errorf("expected first IP address '203.0.113.10', got '%s'", resp.Items[0].Address)
+				if result[0].Address != "203.0.113.10" {
+					t.Errorf("expected first IP address '203.0.113.10', got '%s'", result[0].Address)
 				}
-				if resp.Items[0].Status != "ACTIVE" {
-					t.Errorf("expected first IP status 'ACTIVE', got '%s'", resp.Items[0].Status)
+				if result[0].Status != floatingips.FloatingIPStatusActive {
+					t.Errorf("expected first IP status 'ACTIVE', got '%s'", result[0].Status)
 				}
-				if resp.Items[1].Status != "PENDING" {
-					t.Errorf("expected second IP status 'PENDING', got '%s'", resp.Items[1].Status)
+				if result[1].Status != floatingips.FloatingIPStatusPending {
+					t.Errorf("expected second IP status 'PENDING', got '%s'", result[1].Status)
 				}
 			},
 		},
 		{
 			name: "empty list",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{},
+				"floating_ips": []map[string]interface{}{},
 			},
 			expectedCount: 0,
 			opts:          nil,
-			validateResult: func(t *testing.T, resp *floatingips.FloatingIPListResponse) {
-				if len(resp.Items) != 0 {
-					t.Errorf("expected 0 floating IPs, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, result []*floatingips.FloatingIP) {
+				if len(result) != 0 {
+					t.Errorf("expected 0 floating IPs, got %d", len(result))
 				}
 			},
 		},
 		{
 			name: "filter by status",
 			mockResponse: map[string]interface{}{
-				"items": []map[string]interface{}{
+				"floating_ips": []map[string]interface{}{
 					{
 						"id":         "fip-1",
+						"uuid":       "550e8400-e29b-41d4-a716-446655440001",
+						"name":       "web-ip",
 						"address":    "203.0.113.10",
 						"status":     "ACTIVE",
 						"project_id": "proj-123",
-						"created_at": "2025-01-01T00:00:00Z",
+						"user_id":    "user-123",
+						"reserved":   false,
+						"createdAt":  "2025-01-01T00:00:00Z",
 					},
 				},
 			},
@@ -90,12 +101,13 @@ func TestFloatingIPsList_Success(t *testing.T) {
 			opts: &floatingips.ListFloatingIPsOptions{
 				Status: "ACTIVE",
 			},
-			validateResult: func(t *testing.T, resp *floatingips.FloatingIPListResponse) {
-				if len(resp.Items) != 1 {
-					t.Errorf("expected 1 floating IP, got %d", len(resp.Items))
+			validateResult: func(t *testing.T, result []*floatingips.FloatingIP) {
+				if len(result) != 1 {
+					t.Errorf("expected 1 floating IP, got %d", len(result))
+					return
 				}
-				if resp.Items[0].Status != "ACTIVE" {
-					t.Errorf("expected IP status 'ACTIVE', got '%s'", resp.Items[0].Status)
+				if result[0].Status != floatingips.FloatingIPStatusActive {
+					t.Errorf("expected IP status 'ACTIVE', got '%s'", result[0].Status)
 				}
 			},
 		},
@@ -143,8 +155,8 @@ func TestFloatingIPsList_Success(t *testing.T) {
 			if resp == nil {
 				t.Fatal("expected non-nil response")
 			}
-			if len(resp.Items) != tt.expectedCount {
-				t.Errorf("expected %d items, got %d", tt.expectedCount, len(resp.Items))
+			if len(resp) != tt.expectedCount {
+				t.Errorf("expected %d items, got %d", tt.expectedCount, len(resp))
 			}
 
 			// Run custom validations

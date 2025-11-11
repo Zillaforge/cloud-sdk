@@ -1,6 +1,9 @@
 package servers
 
-import "github.com/Zillaforge/cloud-sdk/models/vps/common"
+import (
+	"github.com/Zillaforge/cloud-sdk/models/vps/common"
+	"github.com/Zillaforge/cloud-sdk/models/vps/flavors"
+)
 
 // ServerStatus represents the status of a server.
 type ServerStatus string
@@ -15,15 +18,6 @@ const (
 	ServerStatusDeleted   ServerStatus = "DELETED"
 	ServerStatusSuspended ServerStatus = "SUSPENDED"
 )
-
-// FlavorInfo contains detailed flavor information.
-type FlavorInfo struct {
-	ID     string `json:"id"`
-	Name   string `json:"name"`
-	VCPU   int    `json:"vcpu"`
-	Memory int    `json:"memory"` // MB
-	Disk   int    `json:"disk"`   // GB
-}
 
 // VRMImgInfo contains VRM image repository information.
 type VRMImgInfo struct {
@@ -42,7 +36,7 @@ type Server struct {
 	StatusReason string            `json:"status_reason,omitempty"`
 	FlavorID     string            `json:"flavor_id"`
 	Flavor       *common.IDName    `json:"flavor,omitempty"`
-	FlavorDetail *FlavorInfo       `json:"flavor_detail,omitempty"`
+	FlavorDetail *flavors.Flavor   `json:"flavor_detail,omitempty"`
 	ImageID      string            `json:"image_id"`
 	Image        *VRMImgInfo       `json:"image,omitempty"`
 	ProjectID    string            `json:"project_id"`

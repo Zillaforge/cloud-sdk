@@ -11,6 +11,7 @@ import (
 
 	cloudsdk "github.com/Zillaforge/cloud-sdk"
 	"github.com/Zillaforge/cloud-sdk/models/vps/flavors"
+	"github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/models/vps/keypairs"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
@@ -115,6 +116,7 @@ func main() {
 			log.Fatal(err)
 		}
 		log.Printf("Created security group: %s (ID: %s)", createdSG.Name, createdSG.ID)
+		securityGroupID = createdSG.ID
 	}
 
 	// Step 4: hardcode image ID
@@ -125,14 +127,32 @@ func main() {
 	encodedPassword := base64.StdEncoding.EncodeToString([]byte(os.Getenv("VM_PASSWORD")))
 	log.Printf("Encoded Password: %s", encodedPassword)
 
-	key, err := vpsClient.Keypairs().Create(ctx, &keypairs.KeypairCreateRequest{
-		Name: "test-key",
+	// Step 5: Create keypair if not exist
+	keypairName := "default"
+	existingKeypairs, err := vpsClient.Keypairs().List(ctx, &keypairs.ListKeypairsOptions{
+		Name: keypairName,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	// Step 5: Create Server using information from Steps 1-4
+	var key *keypairs.Keypair
+	if len(existingKeypairs) > 0 {
+		// Keypair already exists
+		key = existingKeypairs[0]
+		log.Printf("Keypair '%s' already exists with ID: %s", keypairName, key.ID)
+	} else {
+		// Create new keypair
+		key, err = vpsClient.Keypairs().Create(ctx, &keypairs.KeypairCreateRequest{
+			Name: keypairName,
+		})
+		if err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("Created keypair: %s (ID: %s)", key.Name, key.ID)
+	}
+
+	// Step 6: Create Server using information from Steps 1-4
 	req := &servers.ServerCreateRequest{
 		Name:      "test-server",
 		FlavorID:  firstFlavorID,
@@ -154,7 +174,7 @@ func main() {
 
 	log.Printf("Created server: %s (ID: %s)", createdServer.Name, createdServer.ID)
 
-	// Step 6: Wait for server to become active
+	// Step 7: Wait for server to become active
 	log.Printf("Waiting for server to become active...")
 	err = vps.WaitForServerActive(ctx, vpsClient.Servers(), createdServer.ID)
 	if err != nil {
@@ -162,8 +182,7 @@ func main() {
 	}
 	log.Printf("Server is now active")
 
-	// Step 7: Associate floating IP to server NIC
-	// First, get or create a floating IP
+	// Step 8: Associate floating IP to server NIC
 
 	nicList, err := createdServer.NICs().List(ctx)
 	if err != nil {
@@ -183,6 +202,76 @@ func main() {
 		log.Fatal(err)
 	}
 
-	log.Printf("Associate Floating IP: %s", fipInfo.Address)
+	log.Printf("Wait for Associate Floating IP become ACTIVE: %s", fipInfo.Address)
+
+	err = vps.WaitForFloatingIPActive(ctx, vpsClient.FloatingIPs(), fipInfo.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	// Step 9: Update associated Floating IP to Reserved, then Disassociate
+
+	associateIP, err := vpsClient.FloatingIPs().List(ctx, &floatingips.ListFloatingIPsOptions{
+		Address: fipInfo.Address,
+	})
+
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(associateIP) == 0 {
+		log.Fatalf("Floating IP %s not found", fipInfo.Address)
+	}
+
+	// Update the floating IP to Reserved
+	reserved := true
+	updateReq := &floatingips.FloatingIPUpdateRequest{
+		Reserved: &reserved,
+	}
+
+	updatedFIP, err := vpsClient.FloatingIPs().Update(ctx, associateIP[0].ID, updateReq)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Updated Floating IP %s to Reserved: %t", updatedFIP.Address, updatedFIP.Reserved)
+
+	// Disassociate the floating IP
+	err = vpsClient.FloatingIPs().Disassociate(ctx, associateIP[0].ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	log.Printf("Disassociated Floating IP: %s", associateIP[0].Address)
+
+	// Step 10: teardown
+
+	// Delete FIP
+	err = vpsClient.FloatingIPs().Delete(ctx, associateIP[0].ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Floating IP %s Deleted", associateIP[0].Address)
+
+	// Delete Server
+	err = vpsClient.Servers().Delete(ctx, createdServer.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Server %s Deleted", createdServer.Name)
+
+	// Delete keypair
+	err = vpsClient.Keypairs().Delete(ctx, key.ID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Keypair %s deleted", key.Name)
+
+	// Delete SG
+	err = vpsClient.SecurityGroups().Delete(ctx, securityGroupID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	log.Printf("Security group %s deleted", "default")
 
 }

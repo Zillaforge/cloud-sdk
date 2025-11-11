@@ -1,0 +1,444 @@
+openapi: 3.0.0
+info:
+  title: Floating IP API Contract
+  version: 1.0.0
+  description: API contract for Floating IP operations extracted from VPS specification
+  
+servers:
+  - url: /api/v1/project/{project-id}
+
+paths:
+  /floatingips:
+    get:
+      summary: List Floating IPs
+      operationId: listFloatingIPs
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: name
+          in: query
+          description: Filter by name
+          schema:
+            type: string
+        - name: user_id
+          in: query
+          description: Filter by user ID
+          schema:
+            type: string
+        - name: status
+          in: query
+          description: Filter by status
+          schema:
+            type: string
+            enum: [ACTIVE, PENDING, DOWN, REJECTED]
+        - name: reserved
+          in: query
+          description: Filter by reserved status
+          schema:
+            type: boolean
+        - name: device_type
+          in: query
+          description: Filter by device type
+          schema:
+            type: string
+        - name: device_id
+          in: query
+          description: Filter by associated device ID
+          schema:
+            type: string
+        - name: extnet_id
+          in: query
+          description: Filter by external network ID
+          schema:
+            type: string
+        - name: address
+          in: query
+          description: Filter by IP address
+          schema:
+            type: string
+        - name: detail
+          in: query
+          description: Include detailed information
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloatingIPListResponse'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    post:
+      summary: Create Floating IP
+      operationId: createFloatingIP
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FloatingIPCreateRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloatingIP'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /floatingips/{fip-id}:
+    get:
+      summary: Get Floating IP
+      operationId: getFloatingIP
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fip-id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloatingIP'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    put:
+      summary: Update Floating IP
+      operationId: updateFloatingIP
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fip-id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FloatingIPUpdateRequest'
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FloatingIP'
+        '400':
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+    delete:
+      summary: Delete Floating IP
+      operationId: deleteFloatingIP
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fip-id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Conflict
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /floatingips/{fip-id}/disassociate:
+    post:
+      summary: Disassociate Floating IP
+      operationId: disassociateFloatingIP
+      parameters:
+        - name: project-id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fip-id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: No Content
+        '404':
+          description: Not Found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal Server Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+components:
+  schemas:
+    FloatingIP:
+      type: object
+      required:
+        - id
+        - uuid
+        - address
+        - name
+        - project_id
+        - user_id
+        - status
+        - reserved
+        - createdAt
+      properties:
+        id:
+          type: string
+          description: Unique identifier within project
+        uuid:
+          type: string
+          description: Global unique identifier
+        address:
+          type: string
+          description: IPv4 address
+        name:
+          type: string
+          description: User-given display name
+        description:
+          type: string
+          nullable: true
+          description: Optional user description
+        project_id:
+          type: string
+          description: Owning project ID
+        project:
+          $ref: '#/components/schemas/IDName'
+          nullable: true
+          description: Project reference (optional from API)
+        user_id:
+          type: string
+          description: User ID who owns this resource
+        user:
+          $ref: '#/components/schemas/IDName'
+          nullable: true
+          description: User reference (optional from API)
+        port_id:
+          type: string
+          nullable: true
+          description: Associated network port ID
+        device_id:
+          type: string
+          nullable: true
+          description: Associated device/VM ID
+        device_name:
+          type: string
+          nullable: true
+          description: Associated device name
+        device_type:
+          type: string
+          nullable: true
+          description: Associated device type (e.g., server, lb)
+        extnet_id:
+          type: string
+          nullable: true
+          description: External network ID where allocated
+        namespace:
+          type: string
+          nullable: true
+          description: Deployment namespace context
+        status:
+          type: string
+          enum: [ACTIVE, PENDING, DOWN, REJECTED]
+          description: Current status (maps to FloatingIPStatus enum type in SDK)
+        status_reason:
+          type: string
+          nullable: true
+          description: Error reason if status is REJECTED
+        reserved:
+          type: boolean
+          description: Whether reserved for special use (read-only)
+        createdAt:
+          type: string
+          format: date-time
+          description: Creation timestamp (RFC3339)
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Last update timestamp (RFC3339)
+        approvedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Approval timestamp (RFC3339)
+
+    IDName:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          description: Resource ID
+        name:
+          type: string
+          description: Display name
+
+    FloatingIPListResponse:
+      type: object
+      required:
+        - floatingips
+      properties:
+        floatingips:
+          type: array
+          items:
+            $ref: '#/components/schemas/FloatingIP'
+          description: Array of floating IPs (not "items")
+
+    FloatingIPCreateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Optional name for the floating IP
+        description:
+          type: string
+          nullable: true
+          description: Optional description
+
+    FloatingIPUpdateRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Optional name update
+        description:
+          type: string
+          nullable: true
+          description: Optional description update
+        reserved:
+          type: boolean
+          nullable: true
+          description: Reserved field (ignored by SDK per specification)
+
+    ErrorResponse:
+      type: object
+      required:
+        - errorCode
+        - message
+      properties:
+        errorCode:
+          type: string
+          description: Error code identifier
+        message:
+          type: string
+          description: Human-readable error message
+        details:
+          type: string
+          nullable: true
+          description: Additional error details

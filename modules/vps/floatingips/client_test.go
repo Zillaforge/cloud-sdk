@@ -34,7 +34,7 @@ func TestNewClient(t *testing.T) {
 	}
 }
 
-// TestClient_List tests the List method
+// TestClient_List tests the List method returning []*FloatingIP
 func TestClient_List(t *testing.T) {
 	tests := []struct {
 		name           string
@@ -42,31 +42,34 @@ func TestClient_List(t *testing.T) {
 		mockResponse   *floatingips.FloatingIPListResponse
 		mockStatusCode int
 		wantErr        bool
+		expectedCount  int
 		checkPath      string
 	}{
 		{
 			name: "list all floating IPs",
 			opts: nil,
 			mockResponse: &floatingips.FloatingIPListResponse{
-				Items: []*floatingips.FloatingIP{
-					{ID: "fip-1", Address: "203.0.113.1", Status: "ACTIVE"},
-					{ID: "fip-2", Address: "203.0.113.2", Status: "DOWN"},
+				FloatingIPs: []*floatingips.FloatingIP{
+					{ID: "fip-1", Address: "203.0.113.1", Status: floatingips.FloatingIPStatusActive, ProjectID: "proj-123", UserID: "user-123", Reserved: false, CreatedAt: "2025-11-11T10:00:00Z"},
+					{ID: "fip-2", Address: "203.0.113.2", Status: floatingips.FloatingIPStatusDown, ProjectID: "proj-123", UserID: "user-123", Reserved: false, CreatedAt: "2025-11-11T10:00:00Z"},
 				},
 			},
 			mockStatusCode: http.StatusOK,
 			wantErr:        false,
+			expectedCount:  2,
 			checkPath:      "/api/v1/project/proj-123/floatingips",
 		},
 		{
 			name: "list with status filter",
 			opts: &floatingips.ListFloatingIPsOptions{Status: "ACTIVE"},
 			mockResponse: &floatingips.FloatingIPListResponse{
-				Items: []*floatingips.FloatingIP{
-					{ID: "fip-1", Address: "203.0.113.1", Status: "ACTIVE"},
+				FloatingIPs: []*floatingips.FloatingIP{
+					{ID: "fip-1", Address: "203.0.113.1", Status: floatingips.FloatingIPStatusActive, ProjectID: "proj-123", UserID: "user-123", Reserved: false, CreatedAt: "2025-11-11T10:00:00Z"},
 				},
 			},
 			mockStatusCode: http.StatusOK,
 			wantErr:        false,
+			expectedCount:  1,
 			checkPath:      "/api/v1/project/proj-123/floatingips?status=ACTIVE",
 		},
 		{
@@ -75,6 +78,7 @@ func TestClient_List(t *testing.T) {
 			mockResponse:   nil,
 			mockStatusCode: http.StatusInternalServerError,
 			wantErr:        true,
+			expectedCount:  0,
 		},
 	}
 
@@ -115,12 +119,12 @@ func TestClient_List(t *testing.T) {
 				return
 			}
 
-			if result == nil {
-				t.Fatal("expected result, got nil")
+			if result == nil && tt.expectedCount > 0 {
+				t.Fatal("expected non-nil result")
 			}
 
-			if len(result.Items) != len(tt.mockResponse.Items) {
-				t.Errorf("expected %d items, got %d", len(tt.mockResponse.Items), len(result.Items))
+			if len(result) != tt.expectedCount {
+				t.Errorf("expected %d items, got %d", tt.expectedCount, len(result))
 			}
 		})
 	}

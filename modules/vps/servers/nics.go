@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
+	"github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 )
 
@@ -94,7 +95,7 @@ func (c *NICsClient) Delete(ctx context.Context, nicID string) error {
 
 // AssociateFloatingIP associates a floating IP to a specific vNIC.
 // POST /api/v1/project/{project-id}/servers/{svr-id}/nics/{nic-id}/floatingip
-func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*servers.FloatingIPInfo, error) {
+func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req *servers.ServerNICAssociateFloatingIPRequest) (*floatingips.FloatingIP, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/nics/%s/floatingip", c.projectID, c.serverID, nicID)
 
 	// Make request
@@ -104,7 +105,7 @@ func (c *NICsClient) AssociateFloatingIP(ctx context.Context, nicID string, req 
 		Body:   req,
 	}
 
-	var response servers.FloatingIPInfo
+	var response floatingips.FloatingIP
 	if err := c.baseClient.Do(ctx, httpReq, &response); err != nil {
 		return nil, fmt.Errorf("failed to associate floating IP to NIC %s for server %s: %w", nicID, c.serverID, err)
 	}

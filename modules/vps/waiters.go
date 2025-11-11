@@ -8,33 +8,10 @@ import (
 
 	"github.com/Zillaforge/cloud-sdk/internal/types"
 	"github.com/Zillaforge/cloud-sdk/internal/waiter"
+	floatingipsmodels "github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
+	serversmodels "github.com/Zillaforge/cloud-sdk/models/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
-)
-
-// ServerStatus represents the possible states of a server.
-type ServerStatus string
-
-const (
-	// ServerStatusBuild indicates the server is being created.
-	ServerStatusBuild ServerStatus = "BUILD"
-
-	// ServerStatusActive indicates the server is running.
-	ServerStatusActive ServerStatus = "ACTIVE"
-
-	// ServerStatusShutoff indicates the server is stopped.
-	ServerStatusShutoff ServerStatus = "SHUTOFF"
-
-	// ServerStatusError indicates the server encountered an error.
-	ServerStatusError ServerStatus = "ERROR"
-
-	// ServerStatusDeleted indicates the server has been deleted.
-	ServerStatusDeleted ServerStatus = "DELETED"
-
-	// ServerStatusRebooting indicates the server is rebooting.
-	ServerStatusRebooting ServerStatus = "REBOOT"
-
-	// ServerStatusResizing indicates the server is being resized.
-	ServerStatusResizing ServerStatus = "RESIZE"
 )
 
 // ServerWaiterConfig holds configuration for server state waiting.
@@ -46,7 +23,22 @@ type ServerWaiterConfig struct {
 	ServerID string
 
 	// TargetStatus is the desired server state
-	TargetStatus ServerStatus
+	TargetStatus serversmodels.ServerStatus
+
+	// WaiterOptions are passed to the underlying waiter framework
+	WaiterOptions []waiter.Option
+}
+
+// FloatingIPWaiterConfig holds configuration for floating IP state waiting.
+type FloatingIPWaiterConfig struct {
+	// Client is the floating IPs client used to poll floating IP state
+	Client *floatingips.Client
+
+	// FloatingIPID is the ID of the floating IP to monitor
+	FloatingIPID string
+
+	// TargetStatus is the desired floating IP state
+	TargetStatus floatingipsmodels.FloatingIPStatus
 
 	// WaiterOptions are passed to the underlying waiter framework
 	WaiterOptions []waiter.Option
@@ -100,7 +92,7 @@ func WaitForServerStatus(ctx context.Context, cfg ServerWaiterConfig) error {
 			return false, fmt.Errorf("failed to get server status: %w", err)
 		}
 
-		currentStatus := ServerStatus(serverResource.Server.Status)
+		currentStatus := serversmodels.ServerStatus(serverResource.Server.Status)
 
 		// Check if we've reached the target status
 		if currentStatus == cfg.TargetStatus {
@@ -108,8 +100,76 @@ func WaitForServerStatus(ctx context.Context, cfg ServerWaiterConfig) error {
 		}
 
 		// If server is in ERROR state and that's not our target, fail immediately
-		if currentStatus == ServerStatusError && cfg.TargetStatus != ServerStatusError {
+		if currentStatus == serversmodels.ServerStatusError && cfg.TargetStatus != serversmodels.ServerStatusError {
 			return false, fmt.Errorf("server entered ERROR state while waiting for %s", cfg.TargetStatus)
+		}
+
+		// Continue polling
+		return false, nil
+	}
+
+	// Use the generic waiter framework
+	return waiter.Wait(ctx, checkState, opts...)
+}
+
+// WaitForFloatingIPStatus polls a floating IP until it reaches the target status.
+// It returns an error if:
+// - The floating IP reaches REJECTED status (unless that's the target)
+// - The context is canceled
+// - The maximum wait duration is exceeded
+// - An error occurs during polling
+//
+// Example usage:
+//
+//	err := vps.WaitForFloatingIPStatus(ctx, vps.FloatingIPWaiterConfig{
+//	    Client:        floatingIPClient,
+//	    FloatingIPID:  "fip-123",
+//	    TargetStatus:  vps.FloatingIPStatusActive,
+//	    WaiterOptions: []waiter.Option{
+//	        waiter.WithInterval(5 * time.Second),
+//	        waiter.WithMaxWait(10 * time.Minute),
+//	        waiter.WithBackoff(1.5, 30 * time.Second),
+//	    },
+//	})
+func WaitForFloatingIPStatus(ctx context.Context, cfg FloatingIPWaiterConfig) error {
+	if cfg.Client == nil {
+		return fmt.Errorf("floating IP client is required")
+	}
+	if cfg.FloatingIPID == "" {
+		return fmt.Errorf("floating IP ID is required")
+	}
+	if cfg.TargetStatus == "" {
+		return fmt.Errorf("target status is required")
+	}
+
+	// Default waiter options for floating IPs (can be overridden)
+	defaultOpts := []waiter.Option{
+		waiter.WithInterval(5 * time.Second),
+		waiter.WithMaxWait(10 * time.Minute),
+		waiter.WithBackoff(1.2, 30*time.Second),
+	}
+
+	// Merge user options (user options take precedence)
+	opts := append(defaultOpts, cfg.WaiterOptions...)
+
+	// Create the state check function
+	checkState := func(ctx context.Context) (bool, error) {
+		// Get current floating IP state
+		floatingIP, err := cfg.Client.Get(ctx, cfg.FloatingIPID)
+		if err != nil {
+			return false, fmt.Errorf("failed to get floating IP status: %w", err)
+		}
+
+		currentStatus := floatingipsmodels.FloatingIPStatus(floatingIP.Status)
+
+		// Check if we've reached the target status
+		if currentStatus == cfg.TargetStatus {
+			return true, nil
+		}
+
+		// If floating IP is in REJECTED state and that's not our target, fail immediately
+		if currentStatus == floatingipsmodels.FloatingIPStatusRejected && cfg.TargetStatus != floatingipsmodels.FloatingIPStatusRejected {
+			return false, fmt.Errorf("floating IP entered REJECTED state while waiting for %s", cfg.TargetStatus)
 		}
 
 		// Continue polling
@@ -125,7 +185,7 @@ func WaitForServerActive(ctx context.Context, client *servers.Client, serverID s
 	return WaitForServerStatus(ctx, ServerWaiterConfig{
 		Client:        client,
 		ServerID:      serverID,
-		TargetStatus:  ServerStatusActive,
+		TargetStatus:  serversmodels.ServerStatusActive,
 		WaiterOptions: opts,
 	})
 }
@@ -135,7 +195,7 @@ func WaitForServerShutoff(ctx context.Context, client *servers.Client, serverID 
 	return WaitForServerStatus(ctx, ServerWaiterConfig{
 		Client:        client,
 		ServerID:      serverID,
-		TargetStatus:  ServerStatusShutoff,
+		TargetStatus:  serversmodels.ServerStatusShutoff,
 		WaiterOptions: opts,
 	})
 }
@@ -169,4 +229,14 @@ func WaitForServerDeleted(ctx context.Context, client *servers.Client, serverID 
 	}
 
 	return waiter.Wait(ctx, checkState, allOpts...)
+}
+
+// WaitForFloatingIPActive is a convenience function that waits for a floating IP to become ACTIVE.
+func WaitForFloatingIPActive(ctx context.Context, client *floatingips.Client, floatingIPID string, opts ...waiter.Option) error {
+	return WaitForFloatingIPStatus(ctx, FloatingIPWaiterConfig{
+		Client:        client,
+		FloatingIPID:  floatingIPID,
+		TargetStatus:  floatingipsmodels.FloatingIPStatusActive,
+		WaiterOptions: opts,
+	})
 }
