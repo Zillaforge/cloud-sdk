@@ -73,17 +73,6 @@ func TestClient_Keypairs(t *testing.T) {
 	}
 }
 
-// TestClient_Quotas tests that Quotas() returns a QuotasClient
-func TestClient_Quotas(t *testing.T) {
-	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
-
-	quotasClient := client.Quotas()
-
-	if quotasClient == nil {
-		t.Fatal("expected QuotasClient, got nil")
-	}
-}
-
 // TestClient_SecurityGroups tests that SecurityGroups() returns a SecurityGroupsClient
 func TestClient_SecurityGroups(t *testing.T) {
 	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
@@ -118,7 +107,6 @@ func TestClient_AllAccessors(t *testing.T) {
 		{"FloatingIPs", client.FloatingIPs()},
 		{"Flavors", client.Flavors()},
 		{"Keypairs", client.Keypairs()},
-		{"Quotas", client.Quotas()},
 		{"SecurityGroups", client.SecurityGroups()},
 		{"Servers", client.Servers()},
 	}

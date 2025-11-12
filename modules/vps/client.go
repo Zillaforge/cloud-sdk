@@ -10,7 +10,6 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/keypairs"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
-	"github.com/Zillaforge/cloud-sdk/modules/vps/quotas"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
 )
@@ -58,11 +57,6 @@ func (c *Client) Flavors() *flavors.Client {
 // Keypairs returns the keypairs operations client.
 func (c *Client) Keypairs() *keypairs.Client {
 	return keypairs.NewClient(c.baseClient, c.projectID)
-}
-
-// Quotas returns the quotas operations client.
-func (c *Client) Quotas() *quotas.Client {
-	return quotas.NewClient(c.baseClient, c.projectID)
 }
 
 // SecurityGroups returns the security groups operations client.
