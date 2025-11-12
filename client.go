@@ -1,12 +1,16 @@
 package cloudsdk
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"net/url"
 	"time"
 
+	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	"github.com/Zillaforge/cloud-sdk/internal/types"
+	iamprojects "github.com/Zillaforge/cloud-sdk/models/iam/projects"
+	"github.com/Zillaforge/cloud-sdk/modules/iam"
 	"github.com/Zillaforge/cloud-sdk/modules/vps"
 	"github.com/Zillaforge/cloud-sdk/modules/vrm"
 )
@@ -95,13 +99,53 @@ type ProjectClient struct {
 	projectID string
 }
 
-// Project creates a project-scoped client for the given project ID.
-// All subsequent service client calls will be scoped to this project.
-func (c *Client) Project(projectID string) *ProjectClient {
+// Project creates a project-scoped client for the given project ID or project code.
+// If projectIDOrCode is a project ID, it creates the client directly.
+// If it's a project code, it resolves the project ID by listing projects and finding the one with matching extra.iservice.projectSysCode.
+// Returns an error if no matching project is found or if multiple projects match the code.
+func (c *Client) Project(ctx context.Context, projectIDOrCode string) (*ProjectClient, error) {
+	iamClient := c.IAM()
+
+	// Try to get the project directly as projectID
+	_, err := iamClient.Projects().Get(ctx, projectIDOrCode)
+	if err == nil {
+		// It's a valid projectID
+		return &ProjectClient{
+			client:    c,
+			projectID: projectIDOrCode,
+		}, nil
+	}
+
+	// Assume it's a projectCode, list all projects to find matching projectSysCode
+	projects, listErr := iamClient.Projects().List(ctx, nil)
+	if listErr != nil {
+		return nil, fmt.Errorf("failed to list projects: %w", listErr)
+	}
+
+	var matchingProjects []*iamprojects.ProjectMembership
+	for _, pm := range projects {
+		if pm.Project != nil && pm.Project.Extra != nil {
+			if iservice, ok := pm.Project.Extra["iservice"].(map[string]interface{}); ok {
+				if sysCode, ok := iservice["projectSysCode"].(string); ok && sysCode == projectIDOrCode {
+					matchingProjects = append(matchingProjects, pm)
+				}
+			}
+		}
+	}
+
+	if len(matchingProjects) == 0 {
+		return nil, fmt.Errorf("no project found with projectSysCode %s, please use projectID instead", projectIDOrCode)
+	}
+
+	if len(matchingProjects) > 1 {
+		return nil, fmt.Errorf("multiple projects found with projectSysCode %s, please use projectID instead", projectIDOrCode)
+	}
+
+	projectID := matchingProjects[0].Project.ProjectID
 	return &ProjectClient{
 		client:    c,
 		projectID: projectID,
-	}
+	}, nil
 }
 
 // VPS returns a project-scoped VPS service client.
@@ -118,6 +162,18 @@ func (pc *ProjectClient) VRM() *vrm.Client {
 	// Append /vrm to baseURL for VRM service endpoints
 	vrmBaseURL := pc.client.baseURL + "/vrm"
 	return vrm.NewClient(vrmBaseURL, pc.client.token, pc.projectID, pc.client.httpClient, pc.client.logger)
+}
+
+// IAM returns a non-project-scoped IAM service client.
+// IAM operations are global to the authenticated user and don't require a project context.
+func (c *Client) IAM() *iam.Client {
+	// Append /iam to baseURL for IAM service endpoints
+	iamBaseURL := c.baseURL + "/iam"
+
+	// Create internal HTTP client with retry and error handling
+	baseClient := internalhttp.NewClient(iamBaseURL, c.token, c.httpClient, c.logger)
+
+	return iam.NewClient(baseClient)
 }
 
 // BaseURL returns the configured base URL.

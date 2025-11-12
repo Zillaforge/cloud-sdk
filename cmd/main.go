@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"os"
 
@@ -38,34 +39,14 @@ type App struct {
 }
 
 func main() {
-	// Load .env file
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
 
-	// Read environment variables
-	baseURL := os.Getenv("API_HOST")
-	protocol := os.Getenv("API_PROTOCOL")
-	token := os.Getenv("API_TOKEN")
-	projectID := os.Getenv("PROJECT_ID")
-
-	if protocol == "" || baseURL == "" || token == "" || projectID == "" {
-		log.Fatal("Missing required environment variables: BASE_URL, TOKEN, PROJECT_ID")
-	}
-
-	ctx := context.Background()
-
-	client, err := cloudsdk.New(protocol+"://"+baseURL, token)
+	vpsClient, vrmClient, err := initClient()
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	vpsClient := client.Project(projectID).VPS()
-	vrmClient := client.Project(projectID).VRM()
-
 	app := &App{
-		ctx:       ctx,
+		ctx:       context.Background(),
 		vpsClient: vpsClient,
 		vrmClient: vrmClient,
 	}
@@ -98,6 +79,40 @@ func main() {
 	}
 }
 
+func initClient() (*vps.Client, *vrm.Client, error) {
+	// Load .env file
+	err := godotenv.Load()
+	if err != nil {
+		return nil, nil, fmt.Errorf("error loading .env file: %w", err)
+	}
+
+	// Read environment variables
+	baseURL := os.Getenv("API_HOST")
+	protocol := os.Getenv("API_PROTOCOL")
+	token := os.Getenv("API_TOKEN")
+	projectCode := os.Getenv("PROJECT_SYS_CODE")
+
+	if protocol == "" || baseURL == "" || token == "" || projectCode == "" {
+		return nil, nil, errors.New("missing required environment variables: API_PROTOCOL, API_HOST, API_TOKEN, PROJECT_SYS_CODE")
+	}
+
+	ctx := context.Background()
+
+	client, err := cloudsdk.New(protocol+"://"+baseURL, token)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	projectClient, err := client.Project(ctx, projectCode)
+	if err != nil {
+		log.Fatal(err)
+	}
+	vpsClient := projectClient.VPS()
+	vrmClient := projectClient.VRM()
+
+	return vpsClient, vrmClient, nil
+}
+
 func (a *App) setupResources(networkName, securityGroupName, keypairName string) error {
 	// Step 1: Get default Network ID
 	networksList, err := a.vpsClient.Networks().List(a.ctx, &networks.ListNetworksOptions{
@@ -112,7 +127,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 	}
 
 	a.defaultNetworkID = networksList[0].ID
-	log.Printf("Default Network ID: %s", a.defaultNetworkID)
+	log.Printf("Retrieved default network: %s", a.defaultNetworkID)
 
 	// Step 2: Get first flavor ID from flavor list
 	flavorsList, err := a.vpsClient.Flavors().List(a.ctx, &flavors.ListFlavorsOptions{})
@@ -125,7 +140,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 	}
 
 	a.firstFlavorID = flavorsList[0].ID
-	log.Printf("First flavor ID: %s", a.firstFlavorID)
+	log.Printf("Retrieved first flavor: %s", a.firstFlavorID)
 
 	// Step 3: Create Security Group (only if it doesn't exist)
 	// Check if security group already exists
@@ -139,7 +154,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 	if len(existingSGs) > 0 {
 		// Security group already exists
 		a.securityGroupID = existingSGs[0].ID
-		log.Printf("Security group '%s' already exists with ID: %s", securityGroupName, a.securityGroupID)
+		log.Printf("Security group '%s' already exists: %s", securityGroupName, a.securityGroupID)
 	} else {
 		// Create new security group
 		port22 := 22
@@ -166,7 +181,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 		if err != nil {
 			return err
 		}
-		log.Printf("Created security group: %s (ID: %s)", createdSG.Name, createdSG.ID)
+		log.Printf("Created security group: %s (%s)", createdSG.Name, createdSG.ID)
 		a.securityGroupID = createdSG.ID
 	}
 
@@ -180,7 +195,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 		return errors.New("no tag found")
 	}
 	a.tagID = tagsList[0].ID
-	log.Printf("First Repository/Tag is %s:%s", tagsList[0].Repository.Name, tagsList[0].Name)
+	log.Printf("Retrieved first tag: %s:%s", tagsList[0].Repository.Name, tagsList[0].Name)
 
 	// Step 5: Create keypair if not exist
 	existingKeypairs, err := a.vpsClient.Keypairs().List(a.ctx, &keypairs.ListKeypairsOptions{
@@ -193,7 +208,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 	if len(existingKeypairs) > 0 {
 		// Keypair already exists
 		a.keypair = existingKeypairs[0]
-		log.Printf("Keypair '%s' already exists with ID: %s", keypairName, a.keypair.ID)
+		log.Printf("Keypair '%s' already exists: %s", keypairName, a.keypair.ID)
 	} else {
 		// Create new keypair
 		a.keypair, err = a.vpsClient.Keypairs().Create(a.ctx, &keypairs.KeypairCreateRequest{
@@ -202,7 +217,7 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 		if err != nil {
 			return err
 		}
-		log.Printf("Created keypair: %s (ID: %s)", a.keypair.Name, a.keypair.ID)
+		log.Printf("Created keypair: %s (%s)", a.keypair.Name, a.keypair.ID)
 	}
 
 	return nil
@@ -210,8 +225,8 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 
 func (a *App) createServer(serverName, passwordEnvVar string) error {
 	// Encode password to base64
-	encodedPassword := base64.StdEncoding.EncodeToString([]byte(os.Getenv(passwordEnvVar)))
-	log.Printf("Encoded Password: %s", encodedPassword)
+	encodedPassword := base64.StdEncoding.EncodeToString([]byte(passwordEnvVar))
+	log.Printf("Encoded password: %s", encodedPassword)
 
 	// Step 6: Create Server using information from setup
 	req := &servers.ServerCreateRequest{
@@ -235,7 +250,7 @@ func (a *App) createServer(serverName, passwordEnvVar string) error {
 	}
 
 	server := a.server.(*serversResource.ServerResource)
-	log.Printf("Created server: %s (ID: %s)", server.Name, server.ID)
+	log.Printf("Created server: %s (%s)", server.Name, server.ID)
 
 	// Step 7: Wait for server to become active
 	log.Printf("Waiting for server to become active...")
@@ -269,7 +284,7 @@ func (a *App) handleFloatingIP(networkName string) error {
 		return err
 	}
 
-	log.Printf("Wait for Associate Floating IP become ACTIVE: %s", fipInfo.Address)
+	log.Printf("Waiting for floating IP %s to become active...", fipInfo.Address)
 
 	err = vps.WaitForFloatingIPActive(a.ctx, a.vpsClient.FloatingIPs(), fipInfo.ID)
 	if err != nil {
@@ -301,7 +316,7 @@ func (a *App) handleFloatingIP(networkName string) error {
 		return err
 	}
 
-	log.Printf("Updated Floating IP %s to Reserved: %t", updatedFIP.Address, updatedFIP.Reserved)
+	log.Printf("Updated floating IP %s to reserved: %t", updatedFIP.Address, updatedFIP.Reserved)
 
 	// Disassociate the floating IP
 	err = a.vpsClient.FloatingIPs().Disassociate(a.ctx, a.floatingIP.ID)
@@ -309,7 +324,7 @@ func (a *App) handleFloatingIP(networkName string) error {
 		return err
 	}
 
-	log.Printf("Disassociated Floating IP: %s", a.floatingIP.Address)
+	log.Printf("Disassociated floating IP: %s", a.floatingIP.Address)
 
 	return nil
 }
@@ -323,7 +338,7 @@ func (a *App) teardown() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Floating IP %s Deleted", a.floatingIP.Address)
+		log.Printf("Deleted floating IP: %s", a.floatingIP.Address)
 	}
 
 	// Delete Server
@@ -333,7 +348,7 @@ func (a *App) teardown() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Server %s Deleted", server.Name)
+		log.Printf("Deleted server: %s", server.Name)
 	}
 
 	// Delete keypair
@@ -342,7 +357,7 @@ func (a *App) teardown() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Keypair %s deleted", a.keypair.Name)
+		log.Printf("Deleted keypair: %s", a.keypair.Name)
 	}
 
 	// Delete SG
@@ -351,7 +366,7 @@ func (a *App) teardown() error {
 		if err != nil {
 			return err
 		}
-		log.Printf("Security group %s deleted", "example-sg")
+		log.Printf("Deleted security group: %s", "example-sg")
 	}
 
 	return nil

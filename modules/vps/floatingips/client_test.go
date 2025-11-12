@@ -60,8 +60,17 @@ func TestClient_List(t *testing.T) {
 			checkPath:      "/api/v1/project/proj-123/floatingips",
 		},
 		{
-			name: "list with status filter",
-			opts: &floatingips.ListFloatingIPsOptions{Status: "ACTIVE"},
+			name: "list with all filters",
+			opts: &floatingips.ListFloatingIPsOptions{
+				Status:     "ACTIVE",
+				UserID:     "user-123",
+				DeviceType: "server",
+				DeviceID:   "server-123",
+				ExtNetID:   "extnet-123",
+				Address:    "203.0.113.1",
+				Name:       "test-fip",
+				Detail:     true,
+			},
 			mockResponse: &floatingips.FloatingIPListResponse{
 				FloatingIPs: []*floatingips.FloatingIP{
 					{ID: "fip-1", Address: "203.0.113.1", Status: floatingips.FloatingIPStatusActive, ProjectID: "proj-123", UserID: "user-123", Reserved: false, CreatedAt: "2025-11-11T10:00:00Z"},
@@ -70,7 +79,7 @@ func TestClient_List(t *testing.T) {
 			mockStatusCode: http.StatusOK,
 			wantErr:        false,
 			expectedCount:  1,
-			checkPath:      "/api/v1/project/proj-123/floatingips?status=ACTIVE",
+			checkPath:      "/api/v1/project/proj-123/floatingips?status=ACTIVE&user_id=user-123&device_type=server&device_id=server-123&extnet_id=extnet-123&address=203.0.113.1&name=test-fip&detail=true",
 		},
 		{
 			name:           "server error",
@@ -323,6 +332,28 @@ func TestClient_Update(t *testing.T) {
 	}
 }
 
+// TestClient_Update_Error tests the Update method with error response
+func TestClient_Update_Error(t *testing.T) {
+	fipID := "fip-123"
+	request := &floatingips.FloatingIPUpdateRequest{
+		Description: "Updated description",
+	}
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
+	client := NewClient(baseClient, "proj-123")
+
+	_, err := client.Update(context.Background(), fipID, request)
+
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
+
 // TestClient_Delete tests the Delete method
 func TestClient_Delete(t *testing.T) {
 	fipID := "fip-123"
@@ -348,6 +379,25 @@ func TestClient_Delete(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestClient_Delete_Error tests the Delete method with error response
+func TestClient_Delete_Error(t *testing.T) {
+	fipID := "fip-123"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	defer server.Close()
+
+	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
+	client := NewClient(baseClient, "proj-123")
+
+	err := client.Delete(context.Background(), fipID)
+
+	if err == nil {
+		t.Error("expected error, got nil")
 	}
 }
 
@@ -379,6 +429,25 @@ func TestClient_Approve(t *testing.T) {
 	}
 }
 
+// TestClient_Approve_Error tests the Approve method with error response
+func TestClient_Approve_Error(t *testing.T) {
+	fipID := "fip-123"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
+	client := NewClient(baseClient, "proj-123")
+
+	err := client.Approve(context.Background(), fipID)
+
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
+
 // TestClient_Reject tests the Reject method
 func TestClient_Reject(t *testing.T) {
 	fipID := "fip-123"
@@ -407,6 +476,25 @@ func TestClient_Reject(t *testing.T) {
 	}
 }
 
+// TestClient_Reject_Error tests the Reject method with error response
+func TestClient_Reject_Error(t *testing.T) {
+	fipID := "fip-123"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusForbidden)
+	}))
+	defer server.Close()
+
+	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
+	client := NewClient(baseClient, "proj-123")
+
+	err := client.Reject(context.Background(), fipID)
+
+	if err == nil {
+		t.Error("expected error, got nil")
+	}
+}
+
 // TestClient_Disassociate tests the Disassociate method
 func TestClient_Disassociate(t *testing.T) {
 	fipID := "fip-123"
@@ -432,5 +520,24 @@ func TestClient_Disassociate(t *testing.T) {
 
 	if err != nil {
 		t.Errorf("unexpected error: %v", err)
+	}
+}
+
+// TestClient_Disassociate_Error tests the Disassociate method with error response
+func TestClient_Disassociate_Error(t *testing.T) {
+	fipID := "fip-123"
+
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusBadRequest)
+	}))
+	defer server.Close()
+
+	baseClient := internalhttp.NewClient(server.URL, "test-token", &http.Client{Timeout: 5 * time.Second}, nil)
+	client := NewClient(baseClient, "proj-123")
+
+	err := client.Disassociate(context.Background(), fipID)
+
+	if err == nil {
+		t.Error("expected error, got nil")
 	}
 }

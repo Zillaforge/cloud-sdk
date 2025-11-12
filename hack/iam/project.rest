@@ -5,7 +5,7 @@
 @SERVICE = iam
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1
 
-### List Prohect
+### List Project
 # @name projectList
 
 GET {{BASE_URL}}/projects HTTP/1.1
@@ -15,7 +15,7 @@ Authorization: Bearer {{TOKEN}}
 @normalProjectId={{projectList.response.body.$..projects[?(@.project.displayName!='administrator')].project.projectId}}
 
 
-### Get Prohect
+### Get Project
 # @name projectGet
 
 GET {{BASE_URL}}/project/{{normalProjectId}} HTTP/1.1
