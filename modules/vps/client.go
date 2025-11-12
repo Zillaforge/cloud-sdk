@@ -11,7 +11,6 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/keypairs"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/quotas"
-	"github.com/Zillaforge/cloud-sdk/modules/vps/routers"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
 )
@@ -64,11 +63,6 @@ func (c *Client) Keypairs() *keypairs.Client {
 // Quotas returns the quotas operations client.
 func (c *Client) Quotas() *quotas.Client {
 	return quotas.NewClient(c.baseClient, c.projectID)
-}
-
-// Routers returns the routers operations client.
-func (c *Client) Routers() *routers.Client {
-	return routers.NewClient(c.baseClient, c.projectID)
 }
 
 // SecurityGroups returns the security groups operations client.

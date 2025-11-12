@@ -84,17 +84,6 @@ func TestClient_Quotas(t *testing.T) {
 	}
 }
 
-// TestClient_Routers tests that Routers() returns a RoutersClient
-func TestClient_Routers(t *testing.T) {
-	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
-
-	routersClient := client.Routers()
-
-	if routersClient == nil {
-		t.Fatal("expected RoutersClient, got nil")
-	}
-}
-
 // TestClient_SecurityGroups tests that SecurityGroups() returns a SecurityGroupsClient
 func TestClient_SecurityGroups(t *testing.T) {
 	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
@@ -130,7 +119,6 @@ func TestClient_AllAccessors(t *testing.T) {
 		{"Flavors", client.Flavors()},
 		{"Keypairs", client.Keypairs()},
 		{"Quotas", client.Quotas()},
-		{"Routers", client.Routers()},
 		{"SecurityGroups", client.SecurityGroups()},
 		{"Servers", client.Servers()},
 	}
