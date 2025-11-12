@@ -11,6 +11,7 @@ import (
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/common"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
+	tagmod "github.com/Zillaforge/cloud-sdk/models/vrm/tags"
 )
 
 // TestNewClient tests the NewClient constructor
@@ -668,4 +669,740 @@ func findSubstring(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// T110: Test RepositoryResource Tags method
+func TestRepositoryResource_Tags(t *testing.T) {
+	baseClient := internalhttp.NewClient("https://api.example.com", "test-token", &http.Client{}, nil)
+	repo := &repositories.Repository{
+		ID:   "repo-123",
+		Name: "test-repo",
+	}
+
+	repoResource := &RepositoryResource{
+		Repository: repo,
+		tagOps: &TagsClient{
+			baseClient:   baseClient,
+			repositoryID: repo.ID,
+			basePath:     "/api/v1/project/proj-123",
+		},
+	}
+
+	tagsOps := repoResource.Tags()
+	if tagsOps == nil {
+		t.Fatal("expected TagOperations, got nil")
+	}
+
+	// Verify it's the correct type
+	tagsClient, ok := tagsOps.(*TagsClient)
+	if !ok {
+		t.Fatal("expected TagsClient, got different type")
+	}
+
+	if tagsClient.repositoryID != repo.ID {
+		t.Errorf("expected repositoryID %s, got %s", repo.ID, tagsClient.repositoryID)
+	}
+}
+
+// T111: Test TagsClient List method
+func TestTagsClient_List(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		opts         *tagmod.ListTagsOptions
+		mockTags     []*tagmod.Tag
+		expectedPath string
+	}{
+		{
+			name:         "list tags for repository",
+			repositoryID: "repo-123",
+			opts:         nil,
+			mockTags: []*tagmod.Tag{
+				{
+					ID:           "tag-1",
+					Name:         "v1.0",
+					RepositoryID: "repo-123",
+					Type:         "image",
+					Size:         1024,
+					Status:       "active",
+					CreatedAt:    time.Now(),
+					UpdatedAt:    time.Now(),
+					Repository: &tagmod.Repository{
+						ID:   "repo-123",
+						Name: "test-repo",
+					},
+				},
+			},
+			expectedPath: "/api/v1/project/proj-123/repository/repo-123/tags",
+		},
+		{
+			name:         "list tags with limit and offset",
+			repositoryID: "repo-456",
+			opts: &tagmod.ListTagsOptions{
+				Limit:  5,
+				Offset: 10,
+			},
+			mockTags:     []*tagmod.Tag{},
+			expectedPath: "/api/v1/project/proj-123/repository/repo-456/tags",
+		},
+		{
+			name:         "list tags with namespace",
+			repositoryID: "repo-789",
+			opts: &tagmod.ListTagsOptions{
+				Namespace: "private",
+			},
+			mockTags:     []*tagmod.Tag{},
+			expectedPath: "/api/v1/project/proj-123/repository/repo-789/tags",
+		},
+		{
+			name:         "list tags with where filters",
+			repositoryID: "repo-999",
+			opts: &tagmod.ListTagsOptions{
+				Where: []string{"status=active", "type=image"},
+			},
+			mockTags: []*tagmod.Tag{
+				{
+					ID:           "tag-active",
+					Name:         "active-tag",
+					RepositoryID: "repo-999",
+					Type:         "image",
+					Status:       "active",
+					CreatedAt:    time.Now(),
+					UpdatedAt:    time.Now(),
+				},
+			},
+			expectedPath: "/api/v1/project/proj-123/repository/repo-999/tags",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("expected GET request, got %s", r.Method)
+				}
+				if r.URL.Path != tt.expectedPath {
+					t.Errorf("expected path %s, got %s", tt.expectedPath, r.URL.Path)
+				}
+
+				// Verify query parameters
+				if tt.opts != nil {
+					query := r.URL.Query()
+					if tt.opts.Limit > 0 {
+						if query.Get("limit") != "5" {
+							t.Errorf("expected limit=5, got %s", query.Get("limit"))
+						}
+					}
+					if tt.opts.Offset > 0 {
+						if query.Get("offset") != "10" {
+							t.Errorf("expected offset=10, got %s", query.Get("offset"))
+						}
+					}
+					if len(tt.opts.Where) > 0 {
+						whereParams := query["where"]
+						if len(whereParams) != len(tt.opts.Where) {
+							t.Errorf("expected %d where params, got %d", len(tt.opts.Where), len(whereParams))
+						}
+					}
+				}
+
+				// Verify namespace header
+				if tt.opts != nil && tt.opts.Namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.opts.Namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.opts.Namespace, r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				response := tagmod.ListTagsResponse{Tags: tt.mockTags}
+				_ = json.NewEncoder(w).Encode(response)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			tagsClient := &TagsClient{
+				baseClient:   baseClient,
+				repositoryID: tt.repositoryID,
+				basePath:     "/api/v1/project/proj-123",
+			}
+
+			ctx := context.Background()
+			tags, err := tagsClient.List(ctx, tt.opts)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if len(tags) != len(tt.mockTags) {
+				t.Errorf("expected %d tags, got %d", len(tt.mockTags), len(tags))
+			}
+		})
+	}
+}
+
+// T112: Test TagsClient Create method
+func TestTagsClient_Create(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		req          *tagmod.CreateTagRequest
+		mockTag      *tagmod.Tag
+		expectError  bool
+	}{
+		{
+			name:         "create tag successfully",
+			repositoryID: "repo-123",
+			req: &tagmod.CreateTagRequest{
+				Name:            "v1.0",
+				Type:            "image",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+			},
+			mockTag: &tagmod.Tag{
+				ID:           "tag-123",
+				Name:         "v1.0",
+				RepositoryID: "repo-123",
+				Type:         "image",
+				Size:         2048,
+				Status:       "active",
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			},
+			expectError: false,
+		},
+		{
+			name:         "create tag with nil request",
+			repositoryID: "repo-123",
+			req:          nil,
+			mockTag:      nil,
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID + "/tag"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify request body if not nil
+				if tt.req != nil {
+					var reqBody tagmod.CreateTagRequest
+					if err := json.NewDecoder(r.Body).Decode(&reqBody); err != nil {
+						t.Fatalf("failed to decode request body: %v", err)
+					}
+					if reqBody.Name != tt.req.Name {
+						t.Errorf("expected name %s, got %s", tt.req.Name, reqBody.Name)
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				if tt.expectError {
+					w.WriteHeader(http.StatusBadRequest)
+				} else {
+					w.WriteHeader(http.StatusCreated)
+					_ = json.NewEncoder(w).Encode(tt.mockTag)
+				}
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			tagsClient := &TagsClient{
+				baseClient:   baseClient,
+				repositoryID: tt.repositoryID,
+				basePath:     "/api/v1/project/proj-123",
+			}
+
+			ctx := context.Background()
+			tag, err := tagsClient.Create(ctx, tt.req)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if tag == nil {
+					t.Fatal("expected tag, got nil")
+				}
+				if tag.Name != tt.mockTag.Name {
+					t.Errorf("expected name %s, got %s", tt.mockTag.Name, tag.Name)
+				}
+			}
+		})
+	}
+}
+
+// T113: Test TagsClient CreateWithNamespace method
+func TestTagsClient_CreateWithNamespace(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		req          *tagmod.CreateTagRequest
+		namespace    string
+		mockTag      *tagmod.Tag
+		expectError  bool
+	}{
+		{
+			name:         "create tag with namespace",
+			repositoryID: "repo-123",
+			req: &tagmod.CreateTagRequest{
+				Name:            "v2.0",
+				Type:            "image",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+			},
+			namespace: "private",
+			mockTag: &tagmod.Tag{
+				ID:           "tag-456",
+				Name:         "v2.0",
+				RepositoryID: "repo-123",
+				Type:         "image",
+				Size:         4096,
+				Status:       "active",
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			},
+			expectError: false,
+		},
+		{
+			name:         "create tag with empty namespace",
+			repositoryID: "repo-456",
+			req: &tagmod.CreateTagRequest{
+				Name:            "v3.0",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+			},
+			namespace: "",
+			mockTag: &tagmod.Tag{
+				ID:           "tag-789",
+				Name:         "v3.0",
+				RepositoryID: "repo-456",
+				Type:         "common",
+				Size:         1024,
+				Status:       "active",
+				CreatedAt:    time.Now(),
+				UpdatedAt:    time.Now(),
+			},
+			expectError: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID + "/tag"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify namespace header
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %s", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(tt.mockTag)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			tagsClient := &TagsClient{
+				baseClient:   baseClient,
+				repositoryID: tt.repositoryID,
+				basePath:     "/api/v1/project/proj-123",
+			}
+
+			ctx := context.Background()
+			tag, err := tagsClient.CreateWithNamespace(ctx, tt.req, tt.namespace)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				if tag == nil {
+					t.Fatal("expected tag, got nil")
+				}
+				if tag.Name != tt.mockTag.Name {
+					t.Errorf("expected name %s, got %s", tt.mockTag.Name, tag.Name)
+				}
+			}
+		})
+	}
+}
+
+// T114: Test CreateWithNamespace method for repositories
+func TestClient_CreateWithNamespace(t *testing.T) {
+	tests := []struct {
+		name      string
+		req       *repositories.CreateRepositoryRequest
+		namespace string
+		mockRepo  *repositories.Repository
+	}{
+		{
+			name: "create repository with namespace",
+			req: &repositories.CreateRepositoryRequest{
+				Name:            "test-repo-ns",
+				OperatingSystem: "linux",
+			},
+			namespace: "private",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-ns-123",
+				Name:            "test-repo-ns",
+				Namespace:       "private",
+				OperatingSystem: "linux",
+				Count:           0,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			},
+		},
+		{
+			name: "create repository with empty namespace",
+			req: &repositories.CreateRepositoryRequest{
+				Name:            "test-repo-no-ns",
+				OperatingSystem: "windows",
+			},
+			namespace: "",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-no-ns-456",
+				Name:            "test-repo-no-ns",
+				Namespace:       "public",
+				OperatingSystem: "windows",
+				Count:           0,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify namespace header
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %s", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(tt.mockRepo)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			repo, err := client.CreateWithNamespace(ctx, tt.req, tt.namespace)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if repo == nil {
+				t.Fatal("expected repository, got nil")
+			}
+			if repo.Name != tt.mockRepo.Name {
+				t.Errorf("expected name %s, got %s", tt.mockRepo.Name, repo.Name)
+			}
+		})
+	}
+}
+
+// T115: Test GetWithNamespace method
+func TestClient_GetWithNamespace(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		namespace    string
+		mockRepo     *repositories.Repository
+	}{
+		{
+			name:         "get repository with namespace",
+			repositoryID: "repo-123",
+			namespace:    "private",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-123",
+				Name:            "private-repo",
+				Namespace:       "private",
+				OperatingSystem: "linux",
+				Count:           3,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			},
+		},
+		{
+			name:         "get repository with empty namespace",
+			repositoryID: "repo-456",
+			namespace:    "",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-456",
+				Name:            "public-repo",
+				Namespace:       "public",
+				OperatingSystem: "windows",
+				Count:           0,
+				CreatedAt:       time.Now(),
+				UpdatedAt:       time.Now(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("expected GET request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify namespace header
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %s", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(tt.mockRepo)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			repo, err := client.GetWithNamespace(ctx, tt.repositoryID, tt.namespace)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if repo == nil {
+				t.Fatal("expected repository, got nil")
+			}
+			if repo.ID != tt.mockRepo.ID {
+				t.Errorf("expected ID %s, got %s", tt.mockRepo.ID, repo.ID)
+			}
+		})
+	}
+}
+
+// T116: Test UpdateWithNamespace method
+func TestClient_UpdateWithNamespace(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		req          *repositories.UpdateRepositoryRequest
+		namespace    string
+		mockRepo     *repositories.Repository
+	}{
+		{
+			name:         "update repository with namespace",
+			repositoryID: "repo-123",
+			req: &repositories.UpdateRepositoryRequest{
+				Description: "Updated with namespace",
+			},
+			namespace: "private",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-123",
+				Name:            "test-repo",
+				Namespace:       "private",
+				OperatingSystem: "linux",
+				Description:     "Updated with namespace",
+				Count:           5,
+				CreatedAt:       time.Now().Add(-1 * time.Hour),
+				UpdatedAt:       time.Now(),
+			},
+		},
+		{
+			name:         "update repository with empty namespace",
+			repositoryID: "repo-456",
+			req: &repositories.UpdateRepositoryRequest{
+				Description: "Updated without namespace",
+			},
+			namespace: "",
+			mockRepo: &repositories.Repository{
+				ID:              "repo-456",
+				Name:            "test-repo-2",
+				Namespace:       "public",
+				OperatingSystem: "windows",
+				Description:     "Updated without namespace",
+				Count:           2,
+				CreatedAt:       time.Now().Add(-2 * time.Hour),
+				UpdatedAt:       time.Now(),
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPut {
+					t.Errorf("expected PUT request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify namespace header
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %s", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(tt.mockRepo)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			repo, err := client.UpdateWithNamespace(ctx, tt.repositoryID, tt.req, tt.namespace)
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if repo == nil {
+				t.Fatal("expected repository, got nil")
+			}
+			if repo.ID != tt.mockRepo.ID {
+				t.Errorf("expected ID %s, got %s", tt.mockRepo.ID, repo.ID)
+			}
+		})
+	}
+}
+
+// T117: Test DeleteWithNamespace method
+func TestClient_DeleteWithNamespace(t *testing.T) {
+	tests := []struct {
+		name         string
+		repositoryID string
+		namespace    string
+		mockStatus   int
+		expectError  bool
+	}{
+		{
+			name:         "delete repository with namespace success",
+			repositoryID: "repo-123",
+			namespace:    "private",
+			mockStatus:   http.StatusNoContent,
+			expectError:  false,
+		},
+		{
+			name:         "delete repository with empty namespace success",
+			repositoryID: "repo-456",
+			namespace:    "",
+			mockStatus:   http.StatusNoContent,
+			expectError:  false,
+		},
+		{
+			name:         "delete repository with namespace not found",
+			repositoryID: "repo-nonexistent",
+			namespace:    "private",
+			mockStatus:   http.StatusNotFound,
+			expectError:  true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodDelete {
+					t.Errorf("expected DELETE request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				// Verify namespace header
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %s", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				w.WriteHeader(tt.mockStatus)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			err := client.DeleteWithNamespace(ctx, tt.repositoryID, tt.namespace)
+
+			if tt.expectError {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				}
+			} else {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+			}
+		})
+	}
 }

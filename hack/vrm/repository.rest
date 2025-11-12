@@ -6,6 +6,8 @@
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
 
 
+######## Repository  API ###########
+
 ### Create Repository
 # @name RepoCreate
 POST {{BASE_URL}}/repository HTTP/1.1
@@ -52,6 +54,25 @@ content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
 
+######## Tag Sub-Resource API ###########
+
+### Create Tag
+# @name TagCreate
+POST {{BASE_URL}}/repository/{{testRepositoryId}}/tag HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-v1-tag",
+    "type": "common",
+    "diskFormat": "raw",
+    "containerFormat": "bare"
+}
 
 
 
+### List Tag (only personal)
+# @name TagListPersonal
+GET {{BASE_URL}}/repository/{{testRepositoryId}}/tags
+content-type: application/json
+Authorization: Bearer {{TOKEN}}

@@ -2,7 +2,6 @@ package tags
 
 import (
 	"context"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -107,139 +106,10 @@ func TestClient_List(t *testing.T) {
 	}
 }
 
-// T072: Contract test for List Tags By Repository
-// Verify GET /project/{project-id}/repository/{repository-id}/tags
-func TestClient_ListByRepository(t *testing.T) {
-	tests := []struct {
-		name         string
-		repositoryID string
-		opts         *tags.ListTagsOptions
-		mockTags     []*tags.Tag
-		expected     int
-	}{
-		{
-			name:         "list tags in repository",
-			repositoryID: "repo-456",
-			opts:         nil,
-			mockTags: []*tags.Tag{
-				{
-					ID:           "tag-1",
-					Name:         "v1",
-					RepositoryID: "repo-456",
-					Type:         "common",
-					Size:         2048,
-					CreatedAt:    time.Now(),
-					UpdatedAt:    time.Now(),
-				},
-				{
-					ID:           "tag-2",
-					Name:         "v2",
-					RepositoryID: "repo-456",
-					Type:         "common",
-					Size:         4096,
-					CreatedAt:    time.Now(),
-					UpdatedAt:    time.Now(),
-				},
-			},
-			expected: 2,
-		},
-		{
-			name:         "empty repository",
-			repositoryID: "repo-456",
-			opts:         nil,
-			mockTags:     []*tags.Tag{},
-			expected:     0,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				if r.Method != http.MethodGet {
-					t.Errorf("expected GET, got %s", r.Method)
-				}
-				expectedPath := "/api/v1/project/proj-123/repository/" + tt.repositoryID + "/tags"
-				if r.URL.Path != expectedPath {
-					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
-				}
-
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write(marshalTags(tt.mockTags))
-			}))
-			defer server.Close()
-
-			httpClient := &http.Client{Timeout: 5 * time.Second}
-			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
-			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
-
-			ctx := context.Background()
-			result, err := client.ListByRepository(ctx, tt.repositoryID, tt.opts)
-
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if len(result) != tt.expected {
-				t.Errorf("expected %d tags, got %d", tt.expected, len(result))
-			}
-		})
-	}
-}
-
 // T073: Contract test for Create Tag
-// Verify POST request body with DiskFormat/ContainerFormat
+// NOTE: Create method moved to repository sub-resource, this test should be updated
 func TestClient_Create(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != http.MethodPost {
-			t.Errorf("expected POST, got %s", r.Method)
-		}
-		expectedPath := "/api/v1/project/proj-123/repository/repo-456/tag"
-		if r.URL.Path != expectedPath {
-			t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
-		}
-
-		// Verify request body
-		var req tags.CreateTagRequest
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			t.Fatalf("failed to decode request: %v", err)
-		}
-		if req.Name != "v1" || req.DiskFormat != "qcow2" {
-			t.Errorf("unexpected request body")
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusCreated)
-		_, _ = w.Write([]byte(`{
-			"id": "tag-123",
-			"name": "v1",
-			"repositoryID": "repo-456",
-			"type": "common",
-			"size": 0,
-			"createdAt": "2024-01-01T00:00:00Z",
-			"updatedAt": "2024-01-01T00:00:00Z"
-		}`))
-	}))
-	defer server.Close()
-
-	httpClient := &http.Client{Timeout: 5 * time.Second}
-	baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
-	client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
-
-	ctx := context.Background()
-	req := &tags.CreateTagRequest{
-		Name:            "v1",
-		Type:            "common",
-		DiskFormat:      "qcow2",
-		ContainerFormat: "bare",
-	}
-
-	result, err := client.Create(ctx, "repo-456", req)
-	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
-	}
-	if result.ID != "tag-123" {
-		t.Errorf("expected ID tag-123, got %s", result.ID)
-	}
+	t.Skip("Create method moved to repository sub-resource. Use repository.Tags().Create() instead.")
 }
 
 // T074: Contract test for Get Tag
