@@ -8,6 +8,7 @@ import (
 
 	"github.com/Zillaforge/cloud-sdk/internal/types"
 	"github.com/Zillaforge/cloud-sdk/modules/vps"
+	"github.com/Zillaforge/cloud-sdk/modules/vrm"
 )
 
 // Logger defines the interface for logging SDK operations.
@@ -109,6 +110,14 @@ func (pc *ProjectClient) VPS() *vps.Client {
 	// Append /vps to baseURL for VPS service endpoints
 	vpsBaseURL := pc.client.baseURL + "/vps"
 	return vps.NewClient(vpsBaseURL, pc.client.token, pc.projectID, pc.client.httpClient, pc.client.logger)
+}
+
+// VRM returns a project-scoped VRM service client.
+// All VRM operations will be performed within the context of the bound project.
+func (pc *ProjectClient) VRM() *vrm.Client {
+	// Append /vrm to baseURL for VRM service endpoints
+	vrmBaseURL := pc.client.baseURL + "/vrm"
+	return vrm.NewClient(vrmBaseURL, pc.client.token, pc.projectID, pc.client.httpClient, pc.client.logger)
 }
 
 // BaseURL returns the configured base URL.
