@@ -6,8 +6,64 @@
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
 
 
-### List Tags
-# @name TagsList
+### List Repositories
+# @name RepoList
+GET {{BASE_URL}}/repositories HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@reppistoryId={{RepoList.response.body.$.repositories[0].id}}
+
+
+### Create Tag
+# @name TagCreate
+POST {{BASE_URL}}/repository/{{reppistoryId}}/tag HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-v1-tag",
+    "type": "common",
+    "diskFormat": "raw",
+    "containerFormat": "bare"
+}
+
+@testTagId={{TagCreate.response.body.$.id}}
+
+### List Tags (include shared and personal)
+# @name TagsListAll
 GET {{BASE_URL}}/tags HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### List Tag (only personal)
+# @name TagListPersonal
+GET {{BASE_URL}}/repository/{{reppistoryId}}/tags
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Get Tag (can be shared or personal)
+# @name TagGet
+GET {{BASE_URL}}/tag/{{testTagId}}
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Update Tag (only personal)
+# @name TageUpdate
+PUT {{BASE_URL}}/tag/{{testTagId}}
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-v2-tag"
+}
+
+
+### Delete Tag (only personal)
+# @name TagDelete
+DELETE {{BASE_URL}}/tag/{{testTagId}}
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
