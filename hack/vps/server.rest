@@ -37,12 +37,18 @@ GET {{VRM_BASE_URL}}/tags HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
+### List Volume
+# @name VolumeList
+GET {{BASE_URL}}/volumes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
 
 @imageId={{TagsList.response.body.$.tags[0].id}}
 @networkId={{NetworkList.response.body.$.networks[0].id}}
 @flavorId={{FlavorList.response.body.$.flavors[0].id}}
 @sgId={{SecurityGroupList.response.body.$.security_groups[0].id}}
 @fipId={{FloatingIPList.response.body.$.floating_ips[0].id}}
+@volId={{VolumeList.response.body.$.volumes[0].id}}
 
 
 ########### Server API ###########
@@ -128,3 +134,23 @@ Authorization: Bearer {{TOKEN}}
 
 
 ######## Volume Sub-Resource API ###########
+
+### List Server Volume
+# @name ServerVolumeList
+GET {{BASE_URL}}/servers/{{testServerId}}/volumes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@serverVolId={{ServerVolumeList.response.body.$.disks[0].volume_id}}
+
+### Attach a Volume to Server
+# @name ServerVolumeAttach
+POST {{BASE_URL}}/servers/{{testServerId}}/volumes/{{volId}}
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+### Detach a volume from a server
+# @name ServerVolumeDetach
+DELETE {{BASE_URL}}/servers/{{testServerId}}/volumes/{{volId}}
+content-type: application/json
+Authorization: Bearer {{TOKEN}}

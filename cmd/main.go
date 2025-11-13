@@ -17,6 +17,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/tags"
 	"github.com/Zillaforge/cloud-sdk/modules/vps"
 	serversResource "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
@@ -34,8 +35,9 @@ type App struct {
 	securityGroupID  string
 	tagID            string
 	keypair          *keypairs.Keypair
-	server           interface{} // *servers.ServerResource
+	server           *serversResource.ServerResource
 	floatingIP       *floatingips.FloatingIP
+	volume           *volumes.Volume
 }
 
 func main() {
@@ -56,6 +58,7 @@ func main() {
 	securityGroupName := "example-sg"
 	keypairName := "default"
 	serverName := "test-server"
+	volumeName := "test-vol"
 	passwordEnvVar := os.Getenv("VM_PASSWORD")
 
 	// Setup resources
@@ -65,6 +68,11 @@ func main() {
 
 	// Create server
 	if err := app.createServer(serverName, passwordEnvVar); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create volume and attach to server
+	if err := app.createVolumeAndAttach(volumeName); err != nil {
 		log.Fatal(err)
 	}
 
@@ -249,12 +257,11 @@ func (a *App) createServer(serverName, passwordEnvVar string) error {
 		return err
 	}
 
-	server := a.server.(*serversResource.ServerResource)
-	log.Printf("Created server: %s (%s)", server.Name, server.ID)
+	log.Printf("Created server: %s (%s)", a.server.Name, a.server.ID)
 
 	// Step 7: Wait for server to become active
 	log.Printf("Waiting for server to become active...")
-	err = vps.WaitForServerActive(a.ctx, a.vpsClient.Servers(), server.ID)
+	err = vps.WaitForServerActive(a.ctx, a.vpsClient.Servers(), a.server.ID)
 	if err != nil {
 		return err
 	}
@@ -263,10 +270,69 @@ func (a *App) createServer(serverName, passwordEnvVar string) error {
 	return nil
 }
 
+func (a *App) createVolumeAndAttach(volumeName string) error {
+	// Get first volume type
+	volumeTypes, err := a.vpsClient.VolumeTypes().List(a.ctx)
+	if err != nil {
+		return err
+	}
+
+	if len(volumeTypes) == 0 {
+		return errors.New("no volume types available")
+	}
+
+	firstVolumeType := volumeTypes[0]
+	log.Printf("Retrieved first volume type: %s", firstVolumeType)
+
+	// Create volume
+	req := &volumes.CreateVolumeRequest{
+		Name: volumeName,
+		Type: firstVolumeType,
+		Size: 1, // 10 GB
+	}
+
+	a.volume, err = a.vpsClient.Volumes().Create(a.ctx, req)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Created volume: %s (%s)", a.volume.Name, a.volume.ID)
+
+	// Wait for volume to become available
+	log.Printf("Waiting for volume to become available...")
+	err = vps.WaitForVolumeAvailable(a.ctx, a.vpsClient.Volumes(), a.volume.ID)
+	if err != nil {
+		return err
+	}
+	log.Printf("Volume is now available")
+
+	// Attach volume to server
+	actionReq := &volumes.VolumeActionRequest{
+		Action:   volumes.VolumeActionAttach,
+		ServerID: a.server.ID,
+	}
+
+	err = a.vpsClient.Volumes().Action(a.ctx, a.volume.ID, actionReq)
+	if err != nil {
+		return err
+	}
+
+	log.Printf("Attached volume %s to server %s", a.volume.Name, a.server.Name)
+
+	// Wait for volume to become in-use
+	log.Printf("Waiting for volume to become in-use...")
+	err = vps.WaitForVolumeInUse(a.ctx, a.vpsClient.Volumes(), a.volume.ID)
+	if err != nil {
+		return err
+	}
+	log.Printf("Volume is now in-use")
+
+	return nil
+}
+
 func (a *App) handleFloatingIP(networkName string) error {
 	// Step 8: Associate floating IP to server NIC
-	server := a.server.(*serversResource.ServerResource)
-	nicList, err := server.NICs().List(a.ctx)
+	nicList, err := a.server.NICs().List(a.ctx)
 	if err != nil {
 		return err
 	}
@@ -279,7 +345,7 @@ func (a *App) handleFloatingIP(networkName string) error {
 		}
 	}
 
-	fipInfo, err := server.NICs().AssociateFloatingIP(a.ctx, defaultNICId, &servers.ServerNICAssociateFloatingIPRequest{})
+	fipInfo, err := a.server.NICs().AssociateFloatingIP(a.ctx, defaultNICId, &servers.ServerNICAssociateFloatingIPRequest{})
 	if err != nil {
 		return err
 	}
@@ -343,12 +409,11 @@ func (a *App) teardown() error {
 
 	// Delete Server
 	if a.server != nil {
-		server := a.server.(*serversResource.ServerResource)
-		err := a.vpsClient.Servers().Delete(a.ctx, server.ID)
+		err := a.vpsClient.Servers().Delete(a.ctx, a.server.ID)
 		if err != nil {
 			return err
 		}
-		log.Printf("Deleted server: %s", server.Name)
+		log.Printf("Deleted server: %s", a.server.Name)
 	}
 
 	// Delete keypair
@@ -367,6 +432,21 @@ func (a *App) teardown() error {
 			return err
 		}
 		log.Printf("Deleted security group: %s", "example-sg")
+	}
+
+	// Wait for volume to be available, then delete
+	if a.volume != nil {
+		log.Printf("Waiting for volume %s to become available", a.volume.Name)
+		err := vps.WaitForVolumeAvailable(a.ctx, a.vpsClient.Volumes(), a.volume.ID)
+		if err != nil {
+			return fmt.Errorf("failed to wait for volume to become available: %w", err)
+		}
+		log.Printf("Volume %s is now available, deleting", a.volume.Name)
+		err = a.vpsClient.Volumes().Delete(a.ctx, a.volume.ID)
+		if err != nil {
+			return err
+		}
+		log.Printf("Deleted volume: %s", a.volume.Name)
 	}
 
 	return nil

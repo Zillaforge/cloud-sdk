@@ -12,6 +12,7 @@ Auto-generated from all feature plans. Last updated: 2025-10-26
 - N/A (SDK client library, no persistence layer) (008-vrm-tag-repository)
 - Go 1.21+ + Go standard library only (net/http, encoding/json, context, time, fmt) (009-iam-api)
 - N/A (API client, no persistence layer) (009-iam-api)
+- N/A (API client library, no persistence layer) (008-volumes-api)
 
 - Go 1.21+ + Standard library (`net/http`, `encoding/json`, `context`, `time`); consider code-gen from Swagger (e.g., `oapi-codegen` for models only, justified for type safety and maintainability) (1-vps-project-api)
 
@@ -31,9 +32,9 @@ tests/
 Go 1.21+: Follow standard conventions
 
 ## Recent Changes
+- 008-volumes-api: Added Go 1.21+
 - 009-iam-api: Added Go 1.21+ + Go standard library only (net/http, encoding/json, context, time, fmt)
 - 009-iam-api: Added Go 1.21+ + Go standard library only (net/http, encoding/json, context, time, fmt)
-- 008-vrm-tag-repository: Added Go 1.21+
 
 
 <!-- MANUAL ADDITIONS START -->

@@ -1,0 +1,89 @@
+@PROTOCOL = {{$dotenv API_PROTOCOL}}
+@HOST = {{$dotenv API_HOST}}
+@PROJECT = {{$dotenv PROJECT_ID}}
+@TOKEN = {{$dotenv API_TOKEN}}
+@SERVICE = vps
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+
+
+### List Server
+# @name ServerList
+GET {{BASE_URL}}/servers HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@serverId={{ServerList.response.body.$.servers[0].id}}
+
+
+### Get Volume Type
+# @name VolumeTypeList
+GET {{BASE_URL}}/volume_types HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Create Volume
+# @name VolumeCreate
+POST {{BASE_URL}}/volumes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-vol",
+    "size":1,
+    "type":"__DEFAULT__"
+}
+
+@testVolId={{VolumeCreate.response.body.$.id}}
+
+### List Volume
+# @name VolumeList
+GET {{BASE_URL}}/volumes HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Get Volume
+# @name VolumeGet
+GET {{BASE_URL}}/volumes/{{testVolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+### Update Volume
+# @name VolumeUpdate
+PUT {{BASE_URL}}/volumes/{{testVolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "description": "new"
+}
+
+
+### Delete Volume
+# @name VolumeDelete
+DELETE {{BASE_URL}}/volumes/{{testVolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Do Action to Volume
+# attach/detach/extend/revert
+# @name VolumeAction
+POST {{BASE_URL}}/volumes/{{testVolId}}/action
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+# sample body for attach action
+{
+    "action": "attach",
+    "server_id": "{{serverId}}"
+}
+
+# sample body for detach action
+# {
+#     "action": "detach",
+#     "server_id": "{{serverId}}"
+# }
+
+

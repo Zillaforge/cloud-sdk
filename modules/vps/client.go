@@ -12,6 +12,8 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/volumes"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/volumetypes"
 )
 
 // Client provides access to VPS operations for a specific project.
@@ -67,4 +69,14 @@ func (c *Client) SecurityGroups() *securitygroups.Client {
 // Servers returns the servers operations client.
 func (c *Client) Servers() *servers.Client {
 	return servers.NewClient(c.baseClient, c.projectID)
+}
+
+// VolumeTypes returns the volume types operations client.
+func (c *Client) VolumeTypes() *volumetypes.Client {
+	return volumetypes.NewClient(c.baseClient, c.projectID)
+}
+
+// Volumes returns the volumes operations client.
+func (c *Client) Volumes() *volumes.Client {
+	return volumes.NewClient(c.baseClient, c.projectID)
 }
