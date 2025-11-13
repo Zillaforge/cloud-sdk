@@ -19,9 +19,9 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/tags"
-	"github.com/Zillaforge/cloud-sdk/modules/vps"
+	vps "github.com/Zillaforge/cloud-sdk/modules/vps/core"
 	serversResource "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
-	"github.com/Zillaforge/cloud-sdk/modules/vrm"
+	vrm "github.com/Zillaforge/cloud-sdk/modules/vrm/core"
 )
 
 type App struct {

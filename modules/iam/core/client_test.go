@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
-	"github.com/Zillaforge/cloud-sdk/modules/iam"
+	iam "github.com/Zillaforge/cloud-sdk/modules/iam/core"
 	"github.com/Zillaforge/cloud-sdk/modules/iam/projects"
 	"github.com/Zillaforge/cloud-sdk/modules/iam/users"
 )

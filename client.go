@@ -10,9 +10,9 @@ import (
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	"github.com/Zillaforge/cloud-sdk/internal/types"
 	iamprojects "github.com/Zillaforge/cloud-sdk/models/iam/projects"
-	"github.com/Zillaforge/cloud-sdk/modules/iam"
-	"github.com/Zillaforge/cloud-sdk/modules/vps"
-	"github.com/Zillaforge/cloud-sdk/modules/vrm"
+	iam "github.com/Zillaforge/cloud-sdk/modules/iam/core"
+	vps "github.com/Zillaforge/cloud-sdk/modules/vps/core"
+	vrm "github.com/Zillaforge/cloud-sdk/modules/vrm/core"
 )
 
 // Logger defines the interface for logging SDK operations.
