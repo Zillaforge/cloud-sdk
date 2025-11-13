@@ -310,7 +310,7 @@ type NICOperations interface {
 
 // VolumeOperations defines operations on server volumes (sub-resource).
 type VolumeOperations interface {
-	List(ctx context.Context) ([]*servers.VolumeAttachment, error)
+	List(ctx context.Context) ([]*servers.ServerVolume, error)
 	Attach(ctx context.Context, volumeID string) error
 	Detach(ctx context.Context, volumeID string) error
 }

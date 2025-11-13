@@ -327,6 +327,35 @@ func (a *App) createVolumeAndAttach(volumeName string) error {
 	}
 	log.Printf("Volume is now in-use")
 
+	// List all volumes attached to the server
+	volumesList, err := a.server.Volumes().List(a.ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, vol := range volumesList {
+		log.Printf("Attached volume: (%s), System: %t", vol.VolumeID, vol.System)
+	}
+
+	// Detach the non-system volume
+	for _, vol := range volumesList {
+		if !vol.System {
+			err = a.server.Volumes().Detach(a.ctx, vol.VolumeID)
+			if err != nil {
+				return err
+			}
+			log.Printf("Detached non system volume: %s", vol.Volume.Name)
+
+			// Wait for volume to become available after detach
+			log.Printf("Waiting for non system volume to become available after detach...")
+			err = vps.WaitForVolumeAvailable(a.ctx, a.vpsClient.Volumes(), vol.VolumeID)
+			if err != nil {
+				return err
+			}
+			log.Printf("Non System volume is now available after detach")
+		}
+	}
+
 	return nil
 }
 

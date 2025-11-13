@@ -17,7 +17,7 @@ type VolumesClient struct {
 
 // List lists all volume attachments for the server.
 // GET /api/v1/project/{project-id}/servers/{svr-id}/volumes
-func (c *VolumesClient) List(ctx context.Context) ([]*servers.VolumeAttachment, error) {
+func (c *VolumesClient) List(ctx context.Context) ([]*servers.ServerVolume, error) {
 	path := fmt.Sprintf("/api/v1/project/%s/servers/%s/volumes", c.projectID, c.serverID)
 
 	// Make request
@@ -26,12 +26,12 @@ func (c *VolumesClient) List(ctx context.Context) ([]*servers.VolumeAttachment, 
 		Path:   path,
 	}
 
-	var volumes []*servers.VolumeAttachment
-	if err := c.baseClient.Do(ctx, req, &volumes); err != nil {
-		return nil, err
+	var response servers.ServerVolumesResponse
+	if err := c.baseClient.Do(ctx, req, &response); err != nil {
+		return nil, fmt.Errorf("failed to list volumes for server %s: %w", c.serverID, err)
 	}
 
-	return volumes, nil
+	return response.Disks, nil
 }
 
 // Attach attaches a volume to the server.
@@ -46,7 +46,7 @@ func (c *VolumesClient) Attach(ctx context.Context, volumeID string) error {
 	}
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to attach volume %s to server %s: %w", volumeID, c.serverID, err)
 	}
 
 	return nil
@@ -64,7 +64,7 @@ func (c *VolumesClient) Detach(ctx context.Context, volumeID string) error {
 	}
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
-		return err
+		return fmt.Errorf("failed to detach volume %s from server %s: %w", volumeID, c.serverID, err)
 	}
 
 	return nil

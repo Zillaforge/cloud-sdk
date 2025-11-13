@@ -168,6 +168,114 @@ func TestClient_Get(t *testing.T) {
 	}
 }
 
+// T077: Contract test for Get Tag with Namespace
+// Verify GET /project/{project-id}/tag/{tag-id} with X-Namespace header
+func TestClient_GetWithNamespace(t *testing.T) {
+	tests := []struct {
+		name      string
+		tagID     string
+		namespace string
+		wantErr   bool
+	}{
+		{
+			name:      "get tag with namespace",
+			tagID:     "tag-123",
+			namespace: "public",
+			wantErr:   false,
+		},
+		{
+			name:      "get tag with empty namespace",
+			tagID:     "tag-123",
+			namespace: "",
+			wantErr:   false,
+		},
+		{
+			name:      "get tag with empty ID",
+			tagID:     "",
+			namespace: "public",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodGet {
+					t.Errorf("expected GET, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/tag/tag-123"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %q, got %q", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %q", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				if tt.wantErr {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"id": "tag-123",
+					"name": "v1",
+					"repositoryID": "repo-456",
+					"type": "common",
+					"size": 1024,
+					"createdAt": "2024-01-01T00:00:00Z",
+					"updatedAt": "2024-01-01T00:00:00Z",
+					"repository": {
+						"id": "repo-456",
+						"name": "ubuntu",
+						"namespace": "public",
+						"operatingSystem": "linux",
+						"count": 1,
+						"createdAt": "2024-01-01T00:00:00Z",
+						"updatedAt": "2024-01-01T00:00:00Z"
+					}
+				}`))
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			result, err := client.GetWithNamespace(ctx, tt.tagID, tt.namespace)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.ID != "tag-123" {
+				t.Errorf("expected ID tag-123, got %s", result.ID)
+			}
+			if result.Repository == nil {
+				t.Fatal("expected nested repository, got nil")
+			}
+			if result.Repository.ID != "repo-456" {
+				t.Errorf("expected repository ID repo-456, got %s", result.Repository.ID)
+			}
+		})
+	}
+}
+
 // T075: Contract test for Update Tag
 // Verify PUT request
 func TestClient_Update(t *testing.T) {
@@ -237,6 +345,86 @@ func TestClient_Delete(t *testing.T) {
 
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// T079: Contract test for Delete Tag with Namespace
+// Verify DELETE /project/{project-id}/tag/{tag-id} with X-Namespace header
+func TestClient_DeleteWithNamespace(t *testing.T) {
+	tests := []struct {
+		name      string
+		tagID     string
+		namespace string
+		wantErr   bool
+	}{
+		{
+			name:      "delete tag with namespace",
+			tagID:     "tag-123",
+			namespace: "public",
+			wantErr:   false,
+		},
+		{
+			name:      "delete tag with empty namespace",
+			tagID:     "tag-123",
+			namespace: "",
+			wantErr:   false,
+		},
+		{
+			name:      "delete tag with empty ID",
+			tagID:     "",
+			namespace: "public",
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodDelete {
+					t.Errorf("expected DELETE, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/tag/tag-123"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %q, got %q", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %q", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				if tt.wantErr {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
+				w.WriteHeader(http.StatusNoContent)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			err := client.DeleteWithNamespace(ctx, tt.tagID, tt.namespace)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+		})
 	}
 }
 
@@ -316,6 +504,116 @@ func TestTagNamespaceHeaderConstruction(t *testing.T) {
 			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
 
 			_, _ = client.List(context.Background(), tt.opts)
+		})
+	}
+}
+
+// T078: Contract test for Update Tag with Namespace
+// Verify PUT /project/{project-id}/tag/{tag-id} with X-Namespace header
+func TestClient_UpdateWithNamespace(t *testing.T) {
+	tests := []struct {
+		name      string
+		tagID     string
+		namespace string
+		req       *tags.UpdateTagRequest
+		wantErr   bool
+	}{
+		{
+			name:      "update tag with namespace",
+			tagID:     "tag-123",
+			namespace: "public",
+			req: &tags.UpdateTagRequest{
+				Name: "v2",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "update tag with empty namespace",
+			tagID:     "tag-123",
+			namespace: "",
+			req: &tags.UpdateTagRequest{
+				Name: "v3",
+			},
+			wantErr: false,
+		},
+		{
+			name:      "update tag with empty ID",
+			tagID:     "",
+			namespace: "public",
+			req: &tags.UpdateTagRequest{
+				Name: "v2",
+			},
+			wantErr: true,
+		},
+		{
+			name:      "update tag with nil request",
+			tagID:     "tag-123",
+			namespace: "public",
+			req:       nil,
+			wantErr:   true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPut {
+					t.Errorf("expected PUT, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/tag/tag-123"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected X-Namespace %q, got %q", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else {
+					if r.Header.Get("X-Namespace") != "" {
+						t.Errorf("expected no X-Namespace header, got %q", r.Header.Get("X-Namespace"))
+					}
+				}
+
+				if tt.wantErr {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_, _ = w.Write([]byte(`{
+					"id": "tag-123",
+					"name": "v2",
+					"repositoryID": "repo-456",
+					"type": "common",
+					"size": 1024,
+					"createdAt": "2024-01-01T00:00:00Z",
+					"updatedAt": "2024-01-02T00:00:00Z"
+				}`))
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			result, err := client.UpdateWithNamespace(ctx, tt.tagID, tt.req, tt.namespace)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatal("expected error, got nil")
+				}
+				return
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if result.Name != "v2" {
+				t.Errorf("expected name v2, got %s", result.Name)
+			}
 		})
 	}
 }
