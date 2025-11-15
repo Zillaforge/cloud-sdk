@@ -320,19 +320,22 @@ func (c *Client) SnapshotWithNamespace(ctx context.Context, serverID string, req
 
 // Upload uploads an image into VRM and returns the affected repository resource.
 // POST /api/v1/project/{project-id}/upload
-func (c *Client) Upload(ctx context.Context, req *repmod.UploadImageRequest) (*RepositoryResource, error) {
+// Supports three modes: creating a new repository, uploading to an existing repository, or uploading to an existing tag.
+func (c *Client) Upload(ctx context.Context, req repmod.UploadRequester) (*RepositoryResource, error) {
 	return c.UploadWithNamespace(ctx, req, "")
 }
 
 // UploadWithNamespace uploads an image with optional namespace scoping via X-Namespace header.
 // POST /api/v1/project/{project-id}/upload
-func (c *Client) UploadWithNamespace(ctx context.Context, req *repmod.UploadImageRequest, namespace string) (*RepositoryResource, error) {
+func (c *Client) UploadWithNamespace(ctx context.Context, req repmod.UploadRequester, namespace string) (*RepositoryResource, error) {
 	if req == nil {
 		return nil, fmt.Errorf("upload request cannot be nil")
 	}
 	if err := req.Validate(); err != nil {
 		return nil, fmt.Errorf("invalid upload request: %w", err)
 	}
+
+	uploadReq := req.ToUploadImageRequest()
 
 	path := c.basePath + "/upload"
 
@@ -344,7 +347,7 @@ func (c *Client) UploadWithNamespace(ctx context.Context, req *repmod.UploadImag
 	httpReq := &internalhttp.Request{
 		Method:  "POST",
 		Path:    path,
-		Body:    req,
+		Body:    &uploadReq,
 		Headers: headers,
 	}
 

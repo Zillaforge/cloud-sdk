@@ -20,7 +20,6 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
-	"github.com/Zillaforge/cloud-sdk/models/vrm/tags"
 	vps "github.com/Zillaforge/cloud-sdk/modules/vps/core"
 	serversResource "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
 	vrm "github.com/Zillaforge/cloud-sdk/modules/vrm/core"
@@ -32,15 +31,16 @@ type App struct {
 	vrmClient *vrm.Client
 
 	// Resource IDs
-	defaultNetworkID string
-	firstFlavorID    string
-	securityGroupID  string
-	tagID            string
-	keypair          *keypairs.Keypair
-	server           *serversResource.ServerResource
-	floatingIP       *floatingips.FloatingIP
-	volume           *volumes.Volume
-	repositoryID     string
+	defaultNetworkID  string
+	firstFlavorID     string
+	securityGroupID   string
+	tagID             string
+	keypair           *keypairs.Keypair
+	server            *serversResource.ServerResource
+	floatingIP        *floatingips.FloatingIP
+	volume            *volumes.Volume
+	repositoryID      string
+	imageRepositoryID string
 }
 
 func main() {
@@ -63,6 +63,10 @@ func main() {
 	serverName := "test-server"
 	volumeName := "test-vol"
 	passwordEnvVar := os.Getenv("VM_PASSWORD")
+
+	if err := app.uploadImageToRepository(); err != nil {
+		log.Fatal(err)
+	}
 
 	// Setup resources
 	if err := app.setupResources(networkName, securityGroupName, keypairName); err != nil {
@@ -127,6 +131,35 @@ func initClient() (*vps.Client, *vrm.Client, error) {
 	vrmClient := projectClient.VRM()
 
 	return vpsClient, vrmClient, nil
+}
+
+func (a *App) uploadImageToRepository() error {
+	imageURL := "dss-public://" + os.Getenv("IMAGE_SOURCE")
+
+	// Upload to new repository "cirros" with tag "v1"
+	req := &repositories.UploadToNewRepositoryRequest{
+		Name:            "cirros",
+		Version:         "v1",
+		Type:            "common",
+		DiskFormat:      "qcow2",
+		ContainerFormat: "bare",
+		OperatingSystem: "linux",
+		Description:     "Cirros test image",
+		Filepath:        imageURL,
+	}
+
+	response, err := a.vrmClient.Repositories().Upload(a.ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to upload image to new repository: %w", err)
+	}
+
+	log.Printf("Successfully uploaded image to new repository: %s:%s",
+		response.Repository.Name, response.Repository.Tags[0].Name)
+
+	a.tagID = response.Repository.Tags[0].ID
+	a.imageRepositoryID = response.Repository.ID
+
+	return nil
 }
 
 func (a *App) setupResources(networkName, securityGroupName, keypairName string) error {
@@ -200,18 +233,6 @@ func (a *App) setupResources(networkName, securityGroupName, keypairName string)
 		log.Printf("Created security group: %s (%s)", createdSG.Name, createdSG.ID)
 		a.securityGroupID = createdSG.ID
 	}
-
-	// Step 4: Get first tag ID
-	tagsList, err := a.vrmClient.Tags().List(a.ctx, &tags.ListTagsOptions{})
-	if err != nil {
-		return err
-	}
-
-	if len(tagsList) == 0 {
-		return errors.New("no tag found")
-	}
-	a.tagID = tagsList[0].ID
-	log.Printf("Retrieved first tag: %s:%s", tagsList[0].Repository.Name, tagsList[0].Name)
 
 	// Step 5: Create keypair if not exist
 	existingKeypairs, err := a.vpsClient.Keypairs().List(a.ctx, &keypairs.ListKeypairsOptions{
@@ -498,13 +519,15 @@ func (a *App) teardown() error {
 		log.Printf("Deleted volume: %s", a.volume.Name)
 	}
 
-	// Delete repository
-	if a.repositoryID != "" {
-		err := a.vrmClient.Repositories().Delete(a.ctx, a.repositoryID)
-		if err != nil {
-			return err
+	// Delete repositories
+	for _, repo := range []string{a.repositoryID, a.imageRepositoryID} {
+		if repo != "" {
+			err := a.vrmClient.Repositories().Delete(a.ctx, repo)
+			if err != nil {
+				return err
+			}
+			log.Printf("Deleted repoistory: %s", repo)
 		}
-		log.Printf("Deleted repository: %s", a.repositoryID)
 	}
 
 	return nil

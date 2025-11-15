@@ -5,6 +5,7 @@
 @SERVICE = vrm
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
 @VPS_BASE_URL={{PROTOCOL}}://{{HOST}}/vps/api/v1/project/{{PROJECT}}
+@IMAGE_SOURCE={{$dotenv IMAGE_SOURCE}}
 
 
 ### List Server
@@ -70,17 +71,33 @@ POST {{BASE_URL}}/upload
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
+# input I: From CS to a new Repoistory:Tag
 {
     "name":"new_repo",
     "version":"new_tag",
     "type":"common",
     "diskFormat":"qcow2",
     "containerFormat":"bare",
-    "filepath":"dss-public://bucket1762908208/cirros-0.6.2-x86_64-disk.img",
     "operatingSystem":"linux",
-    "description":""
+    "description":"",
+    "filepath": "dss-public://{{IMAGE_SOURCE}}"
 }
 
+# Input II: From CS to a existing Repoistory:Tag
+# {   
+#     "repositoryId": "{{testRepositoryId}}",
+#     "version":"new_tag",
+#     "type":"common",
+#     "diskFormat":"qcow2",
+#     "containerFormat":"bare",
+#     "filepath": "dss-public://{{IMAGE_SOURCE}}"
+# }
+
+# Input III:  From CS to a existing Tag
+# {
+#     "tagId": "",
+#     "filepath": "dss-public://{{IMAGE_SOURCE}}"
+# }
 
 ### Take Snapshot from a server become Tag
 # @name SnapshotTake

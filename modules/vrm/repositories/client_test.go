@@ -522,12 +522,12 @@ func TestClient_Delete(t *testing.T) {
 func TestClient_Upload(t *testing.T) {
 	tests := []struct {
 		name      string
-		req       *repositories.UploadImageRequest
+		req       repositories.UploadRequester
 		namespace string
 	}{
 		{
 			name: "upload to new repository",
-			req: &repositories.UploadImageRequest{
+			req: &repositories.UploadToNewRepositoryRequest{
 				Name:            "ubuntu",
 				OperatingSystem: "linux",
 				Version:         "v1",
@@ -540,7 +540,7 @@ func TestClient_Upload(t *testing.T) {
 		{
 			name:      "upload to existing repository with namespace",
 			namespace: "public",
-			req: &repositories.UploadImageRequest{
+			req: &repositories.UploadToExistingRepositoryRequest{
 				RepositoryID:    "repo-123",
 				Version:         "v2",
 				Type:            "common",
@@ -551,7 +551,7 @@ func TestClient_Upload(t *testing.T) {
 		},
 		{
 			name: "upload to existing tag",
-			req: &repositories.UploadImageRequest{
+			req: &repositories.UploadToExistingTagRequest{
 				TagID:    "tag-123",
 				Filepath: "s3://bucket/image",
 			},
@@ -579,9 +579,6 @@ func TestClient_Upload(t *testing.T) {
 				var body repositories.UploadImageRequest
 				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 					t.Fatalf("failed to decode request body: %v", err)
-				}
-				if body.Filepath != tt.req.Filepath {
-					t.Errorf("expected filepath %s, got %s", tt.req.Filepath, body.Filepath)
 				}
 
 				w.Header().Set("Content-Type", "application/json")

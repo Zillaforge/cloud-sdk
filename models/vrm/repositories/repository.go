@@ -309,6 +309,157 @@ type UploadImageRequest struct {
 	TagID           string `json:"tagId,omitempty"`
 }
 
+// UploadToNewRepositoryRequest represents a request to upload an image and create a new repository.
+type UploadToNewRepositoryRequest struct {
+	Name            string `json:"name"`
+	Version         string `json:"version"`
+	Type            string `json:"type"`
+	DiskFormat      string `json:"diskFormat"`
+	ContainerFormat string `json:"containerFormat"`
+	OperatingSystem string `json:"operatingSystem"`
+	Description     string `json:"description,omitempty"`
+	Filepath        string `json:"filepath"`
+}
+
+// Validate validates the UploadToNewRepositoryRequest.
+func (r *UploadToNewRepositoryRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("uploadToNewRepositoryRequest cannot be nil")
+	}
+	if strings.TrimSpace(r.Name) == "" {
+		return fmt.Errorf("name is required")
+	}
+	if strings.TrimSpace(r.OperatingSystem) == "" {
+		return fmt.Errorf("operatingSystem is required")
+	}
+	if r.OperatingSystem != "linux" && r.OperatingSystem != "windows" {
+		return fmt.Errorf("operatingSystem must be 'linux' or 'windows'")
+	}
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required")
+	}
+	if strings.TrimSpace(r.Type) == "" {
+		return fmt.Errorf("type is required")
+	}
+	if strings.TrimSpace(r.DiskFormat) == "" {
+		return fmt.Errorf("diskFormat is required")
+	}
+	if _, ok := validDiskFormats[r.DiskFormat]; !ok {
+		return fmt.Errorf("invalid diskFormat: %s", r.DiskFormat)
+	}
+	if strings.TrimSpace(r.ContainerFormat) == "" {
+		return fmt.Errorf("containerFormat is required")
+	}
+	if _, ok := validContainerFormats[r.ContainerFormat]; !ok {
+		return fmt.Errorf("invalid containerFormat: %s", r.ContainerFormat)
+	}
+	if strings.TrimSpace(r.Filepath) == "" {
+		return fmt.Errorf("filepath is required")
+	}
+	return nil
+}
+
+// ToUploadImageRequest converts to UploadImageRequest.
+func (r *UploadToNewRepositoryRequest) ToUploadImageRequest() UploadImageRequest {
+	return UploadImageRequest{
+		Name:            r.Name,
+		OperatingSystem: r.OperatingSystem,
+		Version:         r.Version,
+		Type:            r.Type,
+		DiskFormat:      r.DiskFormat,
+		ContainerFormat: r.ContainerFormat,
+		Filepath:        r.Filepath,
+	}
+}
+
+// UploadToExistingRepositoryRequest represents a request to upload an image to an existing repository.
+type UploadToExistingRepositoryRequest struct {
+	RepositoryID    string `json:"repositoryId"`
+	Version         string `json:"version"`
+	Type            string `json:"type"`
+	DiskFormat      string `json:"diskFormat"`
+	ContainerFormat string `json:"containerFormat"`
+	Filepath        string `json:"filepath"`
+}
+
+// Validate validates the UploadToExistingRepositoryRequest.
+func (r *UploadToExistingRepositoryRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("uploadToExistingRepositoryRequest cannot be nil")
+	}
+	if strings.TrimSpace(r.RepositoryID) == "" {
+		return fmt.Errorf("repositoryId is required")
+	}
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required")
+	}
+	if strings.TrimSpace(r.Type) == "" {
+		return fmt.Errorf("type is required")
+	}
+	if strings.TrimSpace(r.DiskFormat) == "" {
+		return fmt.Errorf("diskFormat is required")
+	}
+	if _, ok := validDiskFormats[r.DiskFormat]; !ok {
+		return fmt.Errorf("invalid diskFormat: %s", r.DiskFormat)
+	}
+	if strings.TrimSpace(r.ContainerFormat) == "" {
+		return fmt.Errorf("containerFormat is required")
+	}
+	if _, ok := validContainerFormats[r.ContainerFormat]; !ok {
+		return fmt.Errorf("invalid containerFormat: %s", r.ContainerFormat)
+	}
+	if strings.TrimSpace(r.Filepath) == "" {
+		return fmt.Errorf("filepath is required")
+	}
+	return nil
+}
+
+// ToUploadImageRequest converts to UploadImageRequest.
+func (r *UploadToExistingRepositoryRequest) ToUploadImageRequest() UploadImageRequest {
+	return UploadImageRequest{
+		RepositoryID:    r.RepositoryID,
+		Version:         r.Version,
+		Type:            r.Type,
+		DiskFormat:      r.DiskFormat,
+		ContainerFormat: r.ContainerFormat,
+		Filepath:        r.Filepath,
+	}
+}
+
+// UploadToExistingTagRequest represents a request to upload an image to an existing tag.
+type UploadToExistingTagRequest struct {
+	TagID    string `json:"tagId"`
+	Filepath string `json:"filepath"`
+}
+
+// Validate validates the UploadToExistingTagRequest.
+func (r *UploadToExistingTagRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("uploadToExistingTagRequest cannot be nil")
+	}
+	if strings.TrimSpace(r.TagID) == "" {
+		return fmt.Errorf("tagId is required")
+	}
+	if strings.TrimSpace(r.Filepath) == "" {
+		return fmt.Errorf("filepath is required")
+	}
+	return nil
+}
+
+// ToUploadImageRequest converts to UploadImageRequest.
+func (r *UploadToExistingTagRequest) ToUploadImageRequest() UploadImageRequest {
+	return UploadImageRequest{
+		TagID:    r.TagID,
+		Filepath: r.Filepath,
+	}
+}
+
+// UploadRequester is an interface for upload request types.
+type UploadRequester interface {
+	Validate() error
+	ToUploadImageRequest() UploadImageRequest
+}
+
 // Validate ensures the UploadImageRequest satisfies one of the supported modes.
 func (r *UploadImageRequest) Validate() error {
 	if r == nil {
