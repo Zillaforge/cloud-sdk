@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	repmod "github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
@@ -71,10 +72,12 @@ func (c *Client) List(ctx context.Context, opts *repmod.ListRepositoriesOptions)
 		Headers: headers,
 	}
 
-	var repos []*repmod.Repository
-	if err := c.baseClient.Do(ctx, req, &repos); err != nil {
+	var resp repmod.ListRepositoriesResponse
+	if err := c.baseClient.Do(ctx, req, &resp); err != nil {
 		return nil, fmt.Errorf("failed to list repositories: %w", err)
 	}
+
+	repos := resp.Repositories
 
 	// Wrap repositories in RepositoryResource
 	repoResources := make([]*RepositoryResource, len(repos))
@@ -257,6 +260,113 @@ func (c *Client) DeleteWithNamespace(ctx context.Context, repositoryID string, n
 	}
 
 	return nil
+}
+
+// Snapshot triggers a snapshot operation for a server and returns the associated repository resource.
+// POST /api/v1/project/{project-id}/server/{server-id}/snapshot
+func (c *Client) Snapshot(ctx context.Context, serverID string, req repmod.SnapshotRequester) (*RepositoryResource, error) {
+	return c.SnapshotWithNamespace(ctx, serverID, req, "")
+}
+
+// SnapshotWithNamespace triggers a snapshot operation with optional namespace header for multi-tenant use cases.
+// POST /api/v1/project/{project-id}/server/{server-id}/snapshot
+func (c *Client) SnapshotWithNamespace(ctx context.Context, serverID string, req repmod.SnapshotRequester, namespace string) (*RepositoryResource, error) {
+	if strings.TrimSpace(serverID) == "" {
+		return nil, fmt.Errorf("server ID cannot be empty")
+	}
+	if req == nil {
+		return nil, fmt.Errorf("snapshot request cannot be nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid snapshot request: %w", err)
+	}
+
+	createReq := req.ToCreateSnapshotRequest()
+
+	path := c.basePath + "/server/" + url.PathEscape(serverID) + "/snapshot"
+
+	headers := make(map[string]string)
+	if namespace != "" {
+		headers["X-Namespace"] = namespace
+	}
+
+	httpReq := &internalhttp.Request{
+		Method:  "POST",
+		Path:    path,
+		Body:    &createReq,
+		Headers: headers,
+	}
+
+	var resp repmod.CreateSnapshotResponse
+	if err := c.baseClient.Do(ctx, httpReq, &resp); err != nil {
+		return nil, fmt.Errorf("failed to snapshot server %s: %w", serverID, err)
+	}
+	if resp.Repository == nil {
+		return nil, fmt.Errorf("snapshot response missing repository data")
+	}
+	if resp.Tag != nil {
+		resp.Repository.Tags = append(resp.Repository.Tags, resp.Tag)
+	}
+
+	return &RepositoryResource{
+		Repository: resp.Repository,
+		tagOps: &TagsClient{
+			baseClient:   c.baseClient,
+			repositoryID: resp.Repository.ID,
+			basePath:     c.basePath,
+		},
+	}, nil
+}
+
+// Upload uploads an image into VRM and returns the affected repository resource.
+// POST /api/v1/project/{project-id}/upload
+func (c *Client) Upload(ctx context.Context, req *repmod.UploadImageRequest) (*RepositoryResource, error) {
+	return c.UploadWithNamespace(ctx, req, "")
+}
+
+// UploadWithNamespace uploads an image with optional namespace scoping via X-Namespace header.
+// POST /api/v1/project/{project-id}/upload
+func (c *Client) UploadWithNamespace(ctx context.Context, req *repmod.UploadImageRequest, namespace string) (*RepositoryResource, error) {
+	if req == nil {
+		return nil, fmt.Errorf("upload request cannot be nil")
+	}
+	if err := req.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid upload request: %w", err)
+	}
+
+	path := c.basePath + "/upload"
+
+	headers := make(map[string]string)
+	if namespace != "" {
+		headers["X-Namespace"] = namespace
+	}
+
+	httpReq := &internalhttp.Request{
+		Method:  "POST",
+		Path:    path,
+		Body:    req,
+		Headers: headers,
+	}
+
+	var resp repmod.UploadImageResponse
+	if err := c.baseClient.Do(ctx, httpReq, &resp); err != nil {
+		return nil, fmt.Errorf("failed to upload image: %w", err)
+	}
+	if resp.Repository == nil {
+		return nil, fmt.Errorf("upload response missing repository data")
+	}
+	if resp.Tag != nil {
+		resp.Repository.Tags = append(resp.Repository.Tags, resp.Tag)
+	}
+
+	return &RepositoryResource{
+		Repository: resp.Repository,
+		tagOps: &TagsClient{
+			baseClient:   c.baseClient,
+			repositoryID: resp.Repository.ID,
+			basePath:     c.basePath,
+		},
+	}, nil
 }
 
 // RepositoryResource wraps a Repository with sub-resource operations.

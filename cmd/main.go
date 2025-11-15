@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 
@@ -18,6 +19,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
 	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
+	"github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/tags"
 	vps "github.com/Zillaforge/cloud-sdk/modules/vps/core"
 	serversResource "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
@@ -38,6 +40,7 @@ type App struct {
 	server           *serversResource.ServerResource
 	floatingIP       *floatingips.FloatingIP
 	volume           *volumes.Volume
+	repositoryID     string
 }
 
 func main() {
@@ -73,6 +76,11 @@ func main() {
 
 	// Create volume and attach to server
 	if err := app.createVolumeAndAttach(volumeName); err != nil {
+		log.Fatal(err)
+	}
+
+	// Create snapshot
+	if err := app.createSnapshot(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -359,6 +367,24 @@ func (a *App) createVolumeAndAttach(volumeName string) error {
 	return nil
 }
 
+func (a *App) createSnapshot() error {
+	req := &repositories.CreateSnapshotFromNewRepositoryRequest{
+		Name:            "backup",
+		OperatingSystem: "linux",
+		Version:         time.Now().Format("2006-01-02T15:04:05"),
+	}
+
+	repoResource, err := a.vrmClient.Repositories().Snapshot(a.ctx, a.server.ID, req)
+	if err != nil {
+		return err
+	}
+
+	a.repositoryID = repoResource.ID
+	log.Printf("Created snapshot repository: %s", a.repositoryID)
+
+	return nil
+}
+
 func (a *App) handleFloatingIP(networkName string) error {
 	// Step 8: Associate floating IP to server NIC
 	nicList, err := a.server.NICs().List(a.ctx)
@@ -465,17 +491,20 @@ func (a *App) teardown() error {
 
 	// Wait for volume to be available, then delete
 	if a.volume != nil {
-		log.Printf("Waiting for volume %s to become available", a.volume.Name)
-		err := vps.WaitForVolumeAvailable(a.ctx, a.vpsClient.Volumes(), a.volume.ID)
-		if err != nil {
-			return fmt.Errorf("failed to wait for volume to become available: %w", err)
-		}
-		log.Printf("Volume %s is now available, deleting", a.volume.Name)
-		err = a.vpsClient.Volumes().Delete(a.ctx, a.volume.ID)
+		err := a.vpsClient.Volumes().Delete(a.ctx, a.volume.ID)
 		if err != nil {
 			return err
 		}
 		log.Printf("Deleted volume: %s", a.volume.Name)
+	}
+
+	// Delete repository
+	if a.repositoryID != "" {
+		err := a.vrmClient.Repositories().Delete(a.ctx, a.repositoryID)
+		if err != nil {
+			return err
+		}
+		log.Printf("Deleted repository: %s", a.repositoryID)
 	}
 
 	return nil

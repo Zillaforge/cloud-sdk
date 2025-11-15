@@ -391,6 +391,241 @@ func TestListRepositoriesOptionsValidate(t *testing.T) {
 	}
 }
 
+// T036: Unit test for CreateSnapshotRequest validation
+func TestCreateSnapshotRequestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     *CreateSnapshotRequest
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid request with new repository",
+			req: &CreateSnapshotRequest{
+				Version:         "v1",
+				Name:            "snapshot-repo",
+				OperatingSystem: "linux",
+				Description:     "test",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid request targeting existing repository",
+			req: &CreateSnapshotRequest{
+				Version:      "v2",
+				RepositoryID: "repo-123",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: true,
+			errMsg:  "cannot be nil",
+		},
+		{
+			name: "missing version",
+			req: &CreateSnapshotRequest{
+				Name:            "snapshot-repo",
+				OperatingSystem: "linux",
+			},
+			wantErr: true,
+			errMsg:  "version is required",
+		},
+		{
+			name: "missing name when repositoryId absent",
+			req: &CreateSnapshotRequest{
+				Version:         "v1",
+				OperatingSystem: "linux",
+			},
+			wantErr: true,
+			errMsg:  "name is required",
+		},
+		{
+			name: "missing operating system when repositoryId absent",
+			req: &CreateSnapshotRequest{
+				Version: "v1",
+				Name:    "snapshot-repo",
+			},
+			wantErr: true,
+			errMsg:  "operatingSystem is required",
+		},
+		{
+			name: "invalid operating system",
+			req: &CreateSnapshotRequest{
+				Version:         "v1",
+				Name:            "snapshot-repo",
+				OperatingSystem: "macos",
+			},
+			wantErr: true,
+			errMsg:  "operatingSystem must be",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.errMsg != "" {
+				if !contains(err.Error(), tt.errMsg) {
+					t.Errorf("Validate() error message = %v, want to contain %v", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
+// T037: Unit test for UploadImageRequest validation
+func TestUploadImageRequestValidate(t *testing.T) {
+	tests := []struct {
+		name    string
+		req     *UploadImageRequest
+		wantErr bool
+		errMsg  string
+	}{
+		{
+			name: "valid new repository upload",
+			req: &UploadImageRequest{
+				Name:            "ubuntu",
+				OperatingSystem: "linux",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid repositoryId upload",
+			req: &UploadImageRequest{
+				RepositoryID:    "repo-1",
+				Version:         "v2",
+				Type:            "common",
+				DiskFormat:      "raw",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: false,
+		},
+		{
+			name: "valid tagId upload",
+			req: &UploadImageRequest{
+				TagID:    "tag-1",
+				Filepath: "s3://bucket/image",
+			},
+			wantErr: false,
+		},
+		{
+			name:    "nil request",
+			req:     nil,
+			wantErr: true,
+			errMsg:  "cannot be nil",
+		},
+		{
+			name: "missing filepath",
+			req: &UploadImageRequest{
+				Name:            "ubuntu",
+				OperatingSystem: "linux",
+			},
+			wantErr: true,
+			errMsg:  "filepath is required",
+		},
+		{
+			name: "both repositoryId and tagId provided",
+			req: &UploadImageRequest{
+				RepositoryID: "repo-1",
+				TagID:        "tag-1",
+				Filepath:     "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "only one",
+		},
+		{
+			name: "missing name for new repository mode",
+			req: &UploadImageRequest{
+				OperatingSystem: "linux",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "name is required",
+		},
+		{
+			name: "invalid operating system",
+			req: &UploadImageRequest{
+				Name:            "ubuntu",
+				OperatingSystem: "macos",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "operatingSystem must be",
+		},
+		{
+			name: "repository mode missing version",
+			req: &UploadImageRequest{
+				RepositoryID:    "repo-1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "version is required",
+		},
+		{
+			name: "repository mode invalid disk format",
+			req: &UploadImageRequest{
+				RepositoryID:    "repo-1",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "invalid",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "invalid diskFormat",
+		},
+		{
+			name: "base mode invalid container format",
+			req: &UploadImageRequest{
+				Name:            "ubuntu",
+				OperatingSystem: "linux",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "invalid",
+				Filepath:        "s3://bucket/image",
+			},
+			wantErr: true,
+			errMsg:  "invalid containerFormat",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if (err != nil) != tt.wantErr {
+				t.Errorf("Validate() error = %v, wantErr %v", err, tt.wantErr)
+			}
+			if err != nil && tt.errMsg != "" {
+				if !contains(err.Error(), tt.errMsg) {
+					t.Errorf("Validate() error message = %v, want to contain %v", err.Error(), tt.errMsg)
+				}
+			}
+		})
+	}
+}
+
 // Helper function
 func contains(s, substr string) bool {
 	for i := 0; i < len(s)-len(substr)+1; i++ {

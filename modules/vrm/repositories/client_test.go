@@ -132,7 +132,11 @@ func TestClient_List(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_ = json.NewEncoder(w).Encode(tt.mockRepositories)
+				response := map[string]interface{}{
+					"repositories": tt.mockRepositories,
+					"total":        len(tt.mockRepositories),
+				}
+				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer server.Close()
 
@@ -513,6 +517,299 @@ func TestClient_Delete(t *testing.T) {
 	}
 }
 
+// T111: Contract test for Upload Image
+// Verify POST /api/v1/project/{project-id}/upload with multiple request variants
+func TestClient_Upload(t *testing.T) {
+	tests := []struct {
+		name      string
+		req       *repositories.UploadImageRequest
+		namespace string
+	}{
+		{
+			name: "upload to new repository",
+			req: &repositories.UploadImageRequest{
+				Name:            "ubuntu",
+				OperatingSystem: "linux",
+				Version:         "v1",
+				Type:            "common",
+				DiskFormat:      "qcow2",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+		},
+		{
+			name:      "upload to existing repository with namespace",
+			namespace: "public",
+			req: &repositories.UploadImageRequest{
+				RepositoryID:    "repo-123",
+				Version:         "v2",
+				Type:            "common",
+				DiskFormat:      "raw",
+				ContainerFormat: "bare",
+				Filepath:        "s3://bucket/image",
+			},
+		},
+		{
+			name: "upload to existing tag",
+			req: &repositories.UploadImageRequest{
+				TagID:    "tag-123",
+				Filepath: "s3://bucket/image",
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/upload"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected namespace header %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else if r.Header.Get("X-Namespace") != "" {
+					t.Errorf("did not expect namespace header, got %s", r.Header.Get("X-Namespace"))
+				}
+
+				var body repositories.UploadImageRequest
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatalf("failed to decode request body: %v", err)
+				}
+				if body.Filepath != tt.req.Filepath {
+					t.Errorf("expected filepath %s, got %s", tt.req.Filepath, body.Filepath)
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusOK)
+				_ = json.NewEncoder(w).Encode(&repositories.UploadImageResponse{
+					Repository: &repositories.Repository{
+						ID:              "repo-999",
+						Name:            "ubuntu",
+						Namespace:       "public",
+						OperatingSystem: "linux",
+						Count:           1,
+						CreatedAt:       time.Now(),
+						UpdatedAt:       time.Now(),
+					},
+					Tag: &repositories.Tag{
+						ID:           "tag-1",
+						Name:         "v1",
+						RepositoryID: "repo-999",
+						Type:         "common",
+						Size:         10,
+						CreatedAt:    time.Now(),
+						UpdatedAt:    time.Now(),
+					},
+				})
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			var (
+				repo *RepositoryResource
+				err  error
+			)
+			if tt.namespace != "" {
+				repo, err = client.UploadWithNamespace(ctx, tt.req, tt.namespace)
+			} else {
+				repo, err = client.Upload(ctx, tt.req)
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if repo == nil {
+				t.Fatal("expected repository resource, got nil")
+			}
+			if repo.Repository == nil || len(repo.Repository.Tags) == 0 {
+				t.Fatalf("expected tag appended to repository, got none")
+			}
+			if repo.Repository.Tags[0].ID != "tag-1" {
+				t.Errorf("expected tag ID tag-1, got %s", repo.Repository.Tags[0].ID)
+			}
+		})
+	}
+}
+
+// T112: Validation test for UploadImageRequest nil handling
+func TestClient_Upload_InvalidRequest(t *testing.T) {
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	baseClient := internalhttp.NewClient("https://api.example.com", "test-token", httpClient, nil)
+	client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+	_, err := client.Upload(context.Background(), nil)
+	if err == nil {
+		t.Fatalf("expected error for nil request, got nil")
+	}
+}
+
+// T047: Contract test for Snapshot creation
+// Verify POST /api/v1/project/{project-id}/server/{server-id}/snapshot
+func TestClient_Snapshot(t *testing.T) {
+	tests := []struct {
+		name            string
+		namespace       string
+		req             *repositories.CreateSnapshotRequest
+		expectTagInRepo bool
+	}{
+		{
+			name: "snapshot creates new repository",
+			req: &repositories.CreateSnapshotRequest{
+				Version:         "v1",
+				Name:            "repo-from-server",
+				OperatingSystem: "linux",
+			},
+			expectTagInRepo: true,
+		},
+		{
+			name:      "snapshot into existing repository with namespace",
+			namespace: "public",
+			req: &repositories.CreateSnapshotRequest{
+				Version:      "v2",
+				RepositoryID: "repo-123",
+			},
+			expectTagInRepo: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST request, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/server/server-abc/snapshot"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				if tt.namespace != "" {
+					if r.Header.Get("X-Namespace") != tt.namespace {
+						t.Errorf("expected namespace %s, got %s", tt.namespace, r.Header.Get("X-Namespace"))
+					}
+				} else if r.Header.Get("X-Namespace") != "" {
+					t.Errorf("did not expect namespace header, got %s", r.Header.Get("X-Namespace"))
+				}
+
+				var body repositories.CreateSnapshotRequest
+				if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+					t.Fatalf("failed to decode request body: %v", err)
+				}
+
+				if tt.req.RepositoryID != "" {
+					if body.RepositoryID != tt.req.RepositoryID {
+						t.Errorf("expected repositoryId %s, got %s", tt.req.RepositoryID, body.RepositoryID)
+					}
+				} else {
+					if body.Name != tt.req.Name {
+						t.Errorf("expected name %s, got %s", tt.req.Name, body.Name)
+					}
+					if body.OperatingSystem != tt.req.OperatingSystem {
+						t.Errorf("expected OS %s, got %s", tt.req.OperatingSystem, body.OperatingSystem)
+					}
+				}
+
+				resp := &repositories.CreateSnapshotResponse{
+					Repository: &repositories.Repository{
+						ID:              "repo-from-snapshot",
+						Name:            "repo-from-server",
+						Namespace:       "public",
+						OperatingSystem: "linux",
+						Count:           1,
+						CreatedAt:       time.Now(),
+						UpdatedAt:       time.Now(),
+					},
+					Tag: &repositories.Tag{
+						ID:           "tag-1",
+						Name:         "v1",
+						RepositoryID: "repo-from-snapshot",
+						Type:         "common",
+						CreatedAt:    time.Now(),
+						UpdatedAt:    time.Now(),
+					},
+				}
+
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusCreated)
+				_ = json.NewEncoder(w).Encode(resp)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			ctx := context.Background()
+			var (
+				repo *RepositoryResource
+				err  error
+			)
+			if tt.namespace != "" {
+				repo, err = client.SnapshotWithNamespace(ctx, "server-abc", tt.req, tt.namespace)
+			} else {
+				repo, err = client.Snapshot(ctx, "server-abc", tt.req)
+			}
+
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if repo == nil {
+				t.Fatal("expected repository resource, got nil")
+			}
+			if repo.ID != "repo-from-snapshot" {
+				t.Errorf("expected repository ID repo-from-snapshot, got %s", repo.ID)
+			}
+			if tt.expectTagInRepo {
+				if repo.Repository == nil || len(repo.Repository.Tags) == 0 {
+					t.Fatalf("expected tags in repository, got none")
+				}
+				if repo.Repository.Tags[0].ID != "tag-1" {
+					t.Errorf("expected tag ID tag-1, got %s", repo.Repository.Tags[0].ID)
+				}
+			}
+		})
+	}
+}
+
+// T048: Validation tests for snapshot verb
+func TestClient_SnapshotValidation(t *testing.T) {
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	baseClient := internalhttp.NewClient("https://api.example.com", "token", httpClient, nil)
+	client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+	_, err := client.Snapshot(context.Background(), "", &repositories.CreateSnapshotRequest{
+		Version:         "v1",
+		Name:            "repo",
+		OperatingSystem: "linux",
+	})
+	if err == nil {
+		t.Fatal("expected error for empty server ID, got nil")
+	}
+
+	_, err = client.Snapshot(context.Background(), "server-abc", nil)
+	if err == nil {
+		t.Fatal("expected error for nil request, got nil")
+	}
+
+	_, err = client.Snapshot(context.Background(), "server-abc", &repositories.CreateSnapshotRequest{
+		Version:         "",
+		Name:            "repo",
+		OperatingSystem: "linux",
+	})
+	if err == nil {
+		t.Fatal("expected error for invalid request, got nil")
+	}
+}
+
 // T098: Unit test for query string construction with multiple where filters
 func TestQueryStringConstructionWithMultipleWhereFilters(t *testing.T) {
 	tests := []struct {
@@ -584,7 +881,11 @@ func TestQueryStringConstructionWithMultipleWhereFilters(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte("[]"))
+				response := map[string]interface{}{
+					"repositories": []interface{}{},
+					"total":        0,
+				}
+				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer server.Close()
 
@@ -648,7 +949,11 @@ func TestNamespaceHeaderConstruction(t *testing.T) {
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusOK)
-				_, _ = w.Write([]byte("[]"))
+				response := map[string]interface{}{
+					"repositories": []interface{}{},
+					"total":        0,
+				}
+				_ = json.NewEncoder(w).Encode(response)
 			}))
 			defer server.Close()
 

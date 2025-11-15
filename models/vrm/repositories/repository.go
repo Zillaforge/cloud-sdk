@@ -159,6 +159,243 @@ func (r *UpdateRepositoryRequest) Validate() error {
 	return nil
 }
 
+// CreateSnapshotRequest represents a request to create a snapshot from a server.
+// It supports two modes: creating a snapshot into a new repository (name + operating system)
+// or targeting an existing repository via repository ID. Version is always required.
+type CreateSnapshotRequest struct {
+	Version         string `json:"version"`
+	Name            string `json:"name,omitempty"`
+	OperatingSystem string `json:"operatingSystem,omitempty"`
+	Description     string `json:"description,omitempty"`
+	RepositoryID    string `json:"repositoryId,omitempty"`
+}
+
+// Validate ensures the CreateSnapshotRequest matches the supported modes and values.
+func (r *CreateSnapshotRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("createSnapshotRequest cannot be nil")
+	}
+
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required and must not be empty")
+	}
+
+	repositoryIDProvided := strings.TrimSpace(r.RepositoryID) != ""
+
+	if repositoryIDProvided {
+		return nil
+	}
+
+	if strings.TrimSpace(r.Name) == "" {
+		return fmt.Errorf("name is required when repositoryId is not provided")
+	}
+	if strings.TrimSpace(r.OperatingSystem) == "" {
+		return fmt.Errorf("operatingSystem is required when repositoryId is not provided")
+	}
+	if r.OperatingSystem != "linux" && r.OperatingSystem != "windows" {
+		return fmt.Errorf("operatingSystem must be 'linux' or 'windows'")
+	}
+
+	return nil
+}
+
+// ToCreateSnapshotRequest returns itself for compatibility.
+func (r *CreateSnapshotRequest) ToCreateSnapshotRequest() CreateSnapshotRequest {
+	return *r
+}
+
+// SnapshotRequester is an interface for snapshot request types.
+type SnapshotRequester interface {
+	ToCreateSnapshotRequest() CreateSnapshotRequest
+	Validate() error
+}
+
+// CreateSnapshotFromNewRepositoryRequest represents a request to create a snapshot into a new repository.
+type CreateSnapshotFromNewRepositoryRequest struct {
+	Name            string `json:"name"`
+	OperatingSystem string `json:"operatingSystem"`
+	Version         string `json:"version"`
+	Description     string `json:"description,omitempty"`
+}
+
+// Validate validates the CreateSnapshotFromNewRepositoryRequest.
+func (r *CreateSnapshotFromNewRepositoryRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("request cannot be nil")
+	}
+	if strings.TrimSpace(r.Name) == "" {
+		return fmt.Errorf("name is required")
+	}
+	if r.OperatingSystem != "linux" && r.OperatingSystem != "windows" {
+		return fmt.Errorf("operatingSystem must be 'linux' or 'windows'")
+	}
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required")
+	}
+	return nil
+}
+
+// toCreateSnapshotRequest converts to CreateSnapshotRequest.
+func (r *CreateSnapshotFromNewRepositoryRequest) ToCreateSnapshotRequest() CreateSnapshotRequest {
+	return CreateSnapshotRequest{
+		Name:            r.Name,
+		OperatingSystem: r.OperatingSystem,
+		Version:         r.Version,
+		Description:     r.Description,
+	}
+}
+
+// CreateSnapshotFromExistingRepositoryRequest represents a request to create a snapshot into an existing repository.
+type CreateSnapshotFromExistingRepositoryRequest struct {
+	RepositoryID string `json:"repositoryId"`
+	Version      string `json:"version"`
+}
+
+// Validate validates the CreateSnapshotFromExistingRepositoryRequest.
+func (r *CreateSnapshotFromExistingRepositoryRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("request cannot be nil")
+	}
+	if strings.TrimSpace(r.RepositoryID) == "" {
+		return fmt.Errorf("repositoryId is required")
+	}
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required")
+	}
+	return nil
+}
+
+// toCreateSnapshotRequest converts to CreateSnapshotRequest.
+func (r *CreateSnapshotFromExistingRepositoryRequest) ToCreateSnapshotRequest() CreateSnapshotRequest {
+	return CreateSnapshotRequest{
+		RepositoryID: r.RepositoryID,
+		Version:      r.Version,
+	}
+}
+
+// CreateSnapshotResponse represents the API response after creating a snapshot.
+// It returns the repository metadata (existing or newly created) and the tag
+// generated for the snapshot version.
+type CreateSnapshotResponse struct {
+	Repository *Repository `json:"repository"`
+	Tag        *Tag        `json:"tag"`
+}
+
+var (
+	validDiskFormats = map[string]struct{}{
+		"ami": {}, "ari": {}, "aki": {}, "vhd": {}, "vmdk": {}, "raw": {}, "qcow2": {}, "vdi": {}, "iso": {},
+	}
+	validContainerFormats = map[string]struct{}{
+		"ami": {}, "ari": {}, "aki": {}, "bare": {}, "ovf": {},
+	}
+)
+
+// UploadImageRequest represents a request to upload an image into VRM.
+// The request supports three mutually exclusive modes:
+//  1. Creating a new repository (name + operating system + metadata)
+//  2. Targeting an existing repository via repository ID
+//  3. Targeting an existing tag via tag ID
+//
+// The common field across all modes is the image filepath source.
+type UploadImageRequest struct {
+	Name            string `json:"name,omitempty"`
+	OperatingSystem string `json:"operatingSystem,omitempty"`
+	Version         string `json:"version,omitempty"`
+	Type            string `json:"type,omitempty"`
+	DiskFormat      string `json:"diskFormat,omitempty"`
+	ContainerFormat string `json:"containerFormat,omitempty"`
+	Filepath        string `json:"filepath"`
+	RepositoryID    string `json:"repositoryId,omitempty"`
+	TagID           string `json:"tagId,omitempty"`
+}
+
+// Validate ensures the UploadImageRequest satisfies one of the supported modes.
+func (r *UploadImageRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("uploadImageRequest cannot be nil")
+	}
+	if strings.TrimSpace(r.Filepath) == "" {
+		return fmt.Errorf("filepath is required and must not be empty")
+	}
+
+	hasRepo := strings.TrimSpace(r.RepositoryID) != ""
+	hasTag := strings.TrimSpace(r.TagID) != ""
+
+	if hasRepo && hasTag {
+		return fmt.Errorf("only one of repositoryId or tagId can be provided")
+	}
+
+	if hasTag {
+		return nil
+	}
+
+	if hasRepo {
+		if strings.TrimSpace(r.Version) == "" {
+			return fmt.Errorf("version is required when repositoryId is provided")
+		}
+		if strings.TrimSpace(r.Type) == "" {
+			return fmt.Errorf("type is required when repositoryId is provided")
+		}
+		if strings.TrimSpace(r.DiskFormat) == "" {
+			return fmt.Errorf("diskFormat is required when repositoryId is provided")
+		}
+		if _, ok := validDiskFormats[r.DiskFormat]; !ok {
+			return fmt.Errorf("invalid diskFormat: %s", r.DiskFormat)
+		}
+		if strings.TrimSpace(r.ContainerFormat) == "" {
+			return fmt.Errorf("containerFormat is required when repositoryId is provided")
+		}
+		if _, ok := validContainerFormats[r.ContainerFormat]; !ok {
+			return fmt.Errorf("invalid containerFormat: %s", r.ContainerFormat)
+		}
+		return nil
+	}
+
+	if strings.TrimSpace(r.Name) == "" {
+		return fmt.Errorf("name is required when repositoryId and tagId are not provided")
+	}
+	if strings.TrimSpace(r.OperatingSystem) == "" {
+		return fmt.Errorf("operatingSystem is required when repositoryId and tagId are not provided")
+	}
+	if r.OperatingSystem != "linux" && r.OperatingSystem != "windows" {
+		return fmt.Errorf("operatingSystem must be 'linux' or 'windows'")
+	}
+	if strings.TrimSpace(r.Version) == "" {
+		return fmt.Errorf("version is required when repositoryId and tagId are not provided")
+	}
+	if strings.TrimSpace(r.Type) == "" {
+		return fmt.Errorf("type is required when repositoryId and tagId are not provided")
+	}
+	if strings.TrimSpace(r.DiskFormat) == "" {
+		return fmt.Errorf("diskFormat is required when repositoryId and tagId are not provided")
+	}
+	if _, ok := validDiskFormats[r.DiskFormat]; !ok {
+		return fmt.Errorf("invalid diskFormat: %s", r.DiskFormat)
+	}
+	if strings.TrimSpace(r.ContainerFormat) == "" {
+		return fmt.Errorf("containerFormat is required when repositoryId and tagId are not provided")
+	}
+	if _, ok := validContainerFormats[r.ContainerFormat]; !ok {
+		return fmt.Errorf("invalid containerFormat: %s", r.ContainerFormat)
+	}
+
+	return nil
+}
+
+// UploadImageResponse represents the response after uploading an image.
+// Similar to snapshot creation, it returns the repository metadata and the tag
+// generated (or updated) by the upload operation.
+type UploadImageResponse struct {
+	Repository *Repository `json:"repository"`
+	Tag        *Tag        `json:"tag"`
+}
+
+// ListRepositoriesResponse represents the JSON response structure for listing repositories.
+type ListRepositoriesResponse struct {
+	Repositories []*Repository `json:"repositories"`
+	Total        int           `json:"total"`
+}
+
 // ListRepositoriesOptions represents options for listing repositories.
 // It supports pagination with limit and offset, filtering with where conditions,
 // and namespace specification for multi-tenant operations.

@@ -4,6 +4,16 @@
 @TOKEN = {{$dotenv API_TOKEN}}
 @SERVICE = vrm
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+@VPS_BASE_URL={{PROTOCOL}}://{{HOST}}/vps/api/v1/project/{{PROJECT}}
+
+
+### List Server
+# @name ServerList
+GET {{VPS_BASE_URL}}/servers HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@targetServerId={{ServerList.response.body.$.servers[0].id}}
 
 
 ######## Repository  API ###########
@@ -53,6 +63,43 @@ DELETE {{BASE_URL}}/repository/{{testRepositoryId}}
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
+
+### Upload from CS
+# @name RepoUpload
+POST {{BASE_URL}}/upload
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name":"new_repo",
+    "version":"new_tag",
+    "type":"common",
+    "diskFormat":"qcow2",
+    "containerFormat":"bare",
+    "filepath":"dss-public://bucket1762908208/cirros-0.6.2-x86_64-disk.img",
+    "operatingSystem":"linux",
+    "description":""
+}
+
+
+### Take Snapshot from a server become Tag
+# @name SnapshotTake
+POST {{BASE_URL}}/server/{{targetServerId}}/snapshot HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+{   
+    "name": "newRepositoryName",
+    "operatingSystem":"linux",
+    "version":"aa",
+    "description":""
+}
+
+# {
+#   "repositoryId": "{{testRepositoryId}}",
+#   "version": "0"
+# }
 
 ######## Tag Sub-Resource API ###########
 
