@@ -612,26 +612,26 @@ func TestClient_Upload(t *testing.T) {
 
 			ctx := context.Background()
 			var (
-				repo *RepositoryResource
+				resp *repositories.UploadImageResponse
 				err  error
 			)
 			if tt.namespace != "" {
-				repo, err = client.UploadWithNamespace(ctx, tt.req, tt.namespace)
+				resp, err = client.UploadWithNamespace(ctx, tt.req, tt.namespace)
 			} else {
-				repo, err = client.Upload(ctx, tt.req)
+				resp, err = client.Upload(ctx, tt.req)
 			}
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if repo == nil {
-				t.Fatal("expected repository resource, got nil")
+			if resp == nil {
+				t.Fatal("expected upload response, got nil")
 			}
-			if repo.Repository == nil || len(repo.Repository.Tags) == 0 {
+			if resp.Repository == nil || len(resp.Repository.Tags) == 0 {
 				t.Fatalf("expected tag appended to repository, got none")
 			}
-			if repo.Repository.Tags[0].ID != "tag-1" {
-				t.Errorf("expected tag ID tag-1, got %s", repo.Repository.Tags[0].ID)
+			if resp.Repository.Tags[0].ID != "tag-1" {
+				t.Errorf("expected tag ID tag-1, got %s", resp.Repository.Tags[0].ID)
 			}
 		})
 	}
@@ -747,30 +747,30 @@ func TestClient_Snapshot(t *testing.T) {
 
 			ctx := context.Background()
 			var (
-				repo *RepositoryResource
+				resp *repositories.CreateSnapshotResponse
 				err  error
 			)
 			if tt.namespace != "" {
-				repo, err = client.SnapshotWithNamespace(ctx, "server-abc", tt.req, tt.namespace)
+				resp, err = client.SnapshotWithNamespace(ctx, "server-abc", tt.req, tt.namespace)
 			} else {
-				repo, err = client.Snapshot(ctx, "server-abc", tt.req)
+				resp, err = client.Snapshot(ctx, "server-abc", tt.req)
 			}
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if repo == nil {
-				t.Fatal("expected repository resource, got nil")
+			if resp == nil {
+				t.Fatal("expected snapshot response, got nil")
 			}
-			if repo.ID != "repo-from-snapshot" {
-				t.Errorf("expected repository ID repo-from-snapshot, got %s", repo.ID)
+			if resp.Repository.ID != "repo-from-snapshot" {
+				t.Errorf("expected repository ID repo-from-snapshot, got %s", resp.Repository.ID)
 			}
 			if tt.expectTagInRepo {
-				if repo.Repository == nil || len(repo.Repository.Tags) == 0 {
+				if resp.Repository == nil || len(resp.Repository.Tags) == 0 {
 					t.Fatalf("expected tags in repository, got none")
 				}
-				if repo.Repository.Tags[0].ID != "tag-1" {
-					t.Errorf("expected tag ID tag-1, got %s", repo.Repository.Tags[0].ID)
+				if resp.Repository.Tags[0].ID != "tag-1" {
+					t.Errorf("expected tag ID tag-1, got %s", resp.Repository.Tags[0].ID)
 				}
 			}
 		})

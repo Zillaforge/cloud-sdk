@@ -264,13 +264,13 @@ func (c *Client) DeleteWithNamespace(ctx context.Context, repositoryID string, n
 
 // Snapshot triggers a snapshot operation for a server and returns the associated repository resource.
 // POST /api/v1/project/{project-id}/server/{server-id}/snapshot
-func (c *Client) Snapshot(ctx context.Context, serverID string, req repmod.SnapshotRequester) (*RepositoryResource, error) {
+func (c *Client) Snapshot(ctx context.Context, serverID string, req repmod.SnapshotRequester) (*repmod.CreateSnapshotResponse, error) {
 	return c.SnapshotWithNamespace(ctx, serverID, req, "")
 }
 
 // SnapshotWithNamespace triggers a snapshot operation with optional namespace header for multi-tenant use cases.
 // POST /api/v1/project/{project-id}/server/{server-id}/snapshot
-func (c *Client) SnapshotWithNamespace(ctx context.Context, serverID string, req repmod.SnapshotRequester, namespace string) (*RepositoryResource, error) {
+func (c *Client) SnapshotWithNamespace(ctx context.Context, serverID string, req repmod.SnapshotRequester, namespace string) (*repmod.CreateSnapshotResponse, error) {
 	if strings.TrimSpace(serverID) == "" {
 		return nil, fmt.Errorf("server ID cannot be empty")
 	}
@@ -308,26 +308,19 @@ func (c *Client) SnapshotWithNamespace(ctx context.Context, serverID string, req
 		resp.Repository.Tags = append(resp.Repository.Tags, resp.Tag)
 	}
 
-	return &RepositoryResource{
-		Repository: resp.Repository,
-		tagOps: &TagsClient{
-			baseClient:   c.baseClient,
-			repositoryID: resp.Repository.ID,
-			basePath:     c.basePath,
-		},
-	}, nil
+	return &resp, nil
 }
 
 // Upload uploads an image into VRM and returns the affected repository resource.
 // POST /api/v1/project/{project-id}/upload
 // Supports three modes: creating a new repository, uploading to an existing repository, or uploading to an existing tag.
-func (c *Client) Upload(ctx context.Context, req repmod.UploadRequester) (*RepositoryResource, error) {
+func (c *Client) Upload(ctx context.Context, req repmod.UploadRequester) (*repmod.UploadImageResponse, error) {
 	return c.UploadWithNamespace(ctx, req, "")
 }
 
 // UploadWithNamespace uploads an image with optional namespace scoping via X-Namespace header.
 // POST /api/v1/project/{project-id}/upload
-func (c *Client) UploadWithNamespace(ctx context.Context, req repmod.UploadRequester, namespace string) (*RepositoryResource, error) {
+func (c *Client) UploadWithNamespace(ctx context.Context, req repmod.UploadRequester, namespace string) (*repmod.UploadImageResponse, error) {
 	if req == nil {
 		return nil, fmt.Errorf("upload request cannot be nil")
 	}
@@ -362,14 +355,7 @@ func (c *Client) UploadWithNamespace(ctx context.Context, req repmod.UploadReque
 		resp.Repository.Tags = append(resp.Repository.Tags, resp.Tag)
 	}
 
-	return &RepositoryResource{
-		Repository: resp.Repository,
-		tagOps: &TagsClient{
-			baseClient:   c.baseClient,
-			repositoryID: resp.Repository.ID,
-			basePath:     c.basePath,
-		},
-	}, nil
+	return &resp, nil
 }
 
 // RepositoryResource wraps a Repository with sub-resource operations.

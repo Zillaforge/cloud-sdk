@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/joho/godotenv"
@@ -54,7 +56,7 @@ func main() {
 
 	// Define constants
 	networkName := "default"
-	securityGroupName := "default-sg"
+	securityGroupName := "default-sg-1"
 	keypairName := "default"
 	serverName := "default"
 	volumeName := "default"
@@ -65,6 +67,7 @@ func main() {
 	projectCode := os.Getenv("PROJECT_SYS_CODE")
 	passwordEnvVar := os.Getenv("VM_PASSWORD")
 	imageURL := "dss-public://" + os.Getenv("IMAGE_SOURCE")
+	auto := os.Getenv("AUTO_EXECUTE") != "false" // default to true
 
 	// 1. 初始化客戶端
 	vpsClient, vrmClient, err := initClient(protocol, baseURL, token, projectCode)
@@ -79,52 +82,52 @@ func main() {
 	}
 
 	// 2. 取得Network與Flavor
-	if err := app.getNetworkAndFlavor(); err != nil {
+	if err := app.getNetworkAndFlavor(auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 3. 上傳Image到倉庫
-	if err := app.uploadImageToRepository(imageURL); err != nil {
+	if err := app.uploadImageToRepository(imageURL, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 4. 建立或檢查安全群組
-	if err := app.createOrCheckSecurityGroup(securityGroupName); err != nil {
+	if err := app.createOrCheckSecurityGroup(securityGroupName, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 5. 建立或檢查 Keypair
-	if err := app.createOrCheckKeypair(keypairName); err != nil {
+	if err := app.createOrCheckKeypair(keypairName, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 6. 建立伺服器
-	if err := app.createServer(serverName, passwordEnvVar); err != nil {
+	if err := app.createServer(serverName, passwordEnvVar, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 7. 建立 Volume
-	if err := app.createVolume(volumeName); err != nil {
+	if err := app.createVolume(volumeName, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 8. 建立 Volume Snapshot
-	if err := app.createVolumeSnapshot(); err != nil {
+	if err := app.createVolumeSnapshot(auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 9. 建立 Server Snapshot
-	if err := app.createServerSnapshot(); err != nil {
+	if err := app.createServerSnapshot(auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 10. 關聯 Floating IP
-	if err := app.associateFloatingIP(networkName); err != nil {
+	if err := app.associateFloatingIP(networkName, auto); err != nil {
 		log.Fatal(err)
 	}
 
 	// 11. 刪除所有資源
-	if err := app.deleteAllResources(); err != nil {
+	if err := app.deleteAllResources(auto); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -152,8 +155,21 @@ func initClient(protocol, baseURL, token, projectCode string) (*vps.Client, *vrm
 	return vpsClient, vrmClient, nil
 }
 
-func (a *App) uploadImageToRepository(imageURL string) error {
+func confirmAction(action string) bool {
+	log.Printf("Do you want to %s? (y/N): ", action)
+	scanner := bufio.NewScanner(os.Stdin)
+	scanner.Scan()
+	input := strings.ToLower(strings.TrimSpace(scanner.Text()))
+	return input == "y" || input == "yes"
+}
+
+func (a *App) uploadImageToRepository(imageURL string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("upload image to repository") {
+		return fmt.Errorf("user cancelled upload image to repository")
+	}
+
 	// Upload to new repository "cirros" with tag "v1"
 	req := &repositories.UploadToNewRepositoryRequest{
 		Name:            "cirros",
@@ -171,16 +187,27 @@ func (a *App) uploadImageToRepository(imageURL string) error {
 		return fmt.Errorf("failed to upload image to new repository: %w", err)
 	}
 
-	a.tagID = response.Repository.Tags[0].ID
+	a.tagID = response.Tag.ID
 	a.imageRepositoryID = response.Repository.ID
 
-	log.Printf("Image Repository (%s) Uploaded", a.imageRepositoryID)
+	log.Printf("Image Repository (%s) Created", a.imageRepositoryID)
+
+	err = vrm.WaitForTagActive(a.ctx, a.vrmClient.Tags(), a.tagID)
+	if err != nil {
+		return fmt.Errorf("failed to wait for tag to become active: %w", err)
+	}
+	log.Printf("Imag tag (%s) Active", a.tagID)
 
 	return nil
 }
 
-func (a *App) getNetworkAndFlavor() error {
+func (a *App) getNetworkAndFlavor(auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("get network and flavor") {
+		return fmt.Errorf("user cancelled get network and flavor")
+	}
+
 	// 2-1: Get default Network ID
 	networksList, err := a.vpsClient.Networks().List(a.ctx, &networks.ListNetworksOptions{
 		Name: "default",
@@ -212,8 +239,13 @@ func (a *App) getNetworkAndFlavor() error {
 	return nil
 }
 
-func (a *App) createOrCheckSecurityGroup(securityGroupName string) error {
+func (a *App) createOrCheckSecurityGroup(securityGroupName string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create or check security group") {
+		return fmt.Errorf("user cancelled create or check security group")
+	}
+
 	// Check if security group already exists
 	existingSGs, err := a.vpsClient.SecurityGroups().List(a.ctx, &securitygroups.ListSecurityGroupsOptions{
 		Name: securityGroupName,
@@ -259,8 +291,12 @@ func (a *App) createOrCheckSecurityGroup(securityGroupName string) error {
 	return nil
 }
 
-func (a *App) createOrCheckKeypair(keypairName string) error {
+func (a *App) createOrCheckKeypair(keypairName string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create or check keypair") {
+		return fmt.Errorf("user cancelled create or check keypair")
+	}
 
 	existingKeypairs, err := a.vpsClient.Keypairs().List(a.ctx, &keypairs.ListKeypairsOptions{
 		Name: keypairName,
@@ -287,8 +323,13 @@ func (a *App) createOrCheckKeypair(keypairName string) error {
 	return nil
 }
 
-func (a *App) createServer(serverName, passwordEnvVar string) error {
+func (a *App) createServer(serverName, passwordEnvVar string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create server") {
+		return fmt.Errorf("user cancelled create server")
+	}
+
 	// Encode password to base64
 	encodedPassword := base64.StdEncoding.EncodeToString([]byte(passwordEnvVar))
 	log.Printf("Encoded password: %s", encodedPassword)
@@ -327,8 +368,13 @@ func (a *App) createServer(serverName, passwordEnvVar string) error {
 	return nil
 }
 
-func (a *App) createVolume(volumeName string) error {
+func (a *App) createVolume(volumeName string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create volume") {
+		return fmt.Errorf("user cancelled create volume")
+	}
+
 	// Get first volume type
 	volumeTypes, err := a.vpsClient.VolumeTypes().List(a.ctx)
 	if err != nil {
@@ -386,8 +432,13 @@ func (a *App) createVolume(volumeName string) error {
 	return nil
 }
 
-func (a *App) createVolumeSnapshot() error {
+func (a *App) createVolumeSnapshot(auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create volume snapshot") {
+		return fmt.Errorf("user cancelled create volume snapshot")
+	}
+
 	snapshotName := a.volume.Name + "-snapshot"
 	snapshotReq := &snapshots.CreateSnapshotRequest{
 		Name:     snapshotName,
@@ -411,8 +462,13 @@ func (a *App) createVolumeSnapshot() error {
 	return nil
 }
 
-func (a *App) createServerSnapshot() error {
+func (a *App) createServerSnapshot(auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("create server snapshot") {
+		return fmt.Errorf("user cancelled create server snapshot")
+	}
+
 	req := &repositories.CreateSnapshotFromNewRepositoryRequest{
 		Name:            "backup",
 		OperatingSystem: "linux",
@@ -424,14 +480,26 @@ func (a *App) createServerSnapshot() error {
 		return err
 	}
 
-	a.repositoryID = repoResource.ID
-	log.Printf("Server snapshot repository (%s) Available", a.repositoryID)
+	a.repositoryID = repoResource.Repository.ID
+	log.Printf("Server snapshot repository (%s) Created", a.repositoryID)
+
+	// Wait for the tag to become available
+	err = vrm.WaitForTagAvailable(a.ctx, a.vrmClient.Tags(), repoResource.Tag.ID)
+	if err != nil {
+		return fmt.Errorf("failed to wait for tag to become available: %w", err)
+	}
+	log.Printf("Server snapshot tag (%s) Available", repoResource.Tag.ID)
 
 	return nil
 }
 
-func (a *App) associateFloatingIP(networkName string) error {
+func (a *App) associateFloatingIP(networkName string, auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("associate floating IP") {
+		return fmt.Errorf("user cancelled associate floating IP")
+	}
+
 	// Step 8: Associate floating IP to server NIC
 	nicList, err := a.server.NICs().List(a.ctx)
 	if err != nil {
@@ -476,8 +544,13 @@ func (a *App) associateFloatingIP(networkName string) error {
 	return nil
 }
 
-func (a *App) deleteAllResources() error {
+func (a *App) deleteAllResources(auto bool) error {
 	log.Println("")
+
+	if !auto && !confirmAction("delete all resources") {
+		return fmt.Errorf("user cancelled delete all resources")
+	}
+
 	log.Println("################################")
 	log.Println("#  START DELETE ALL RESOURCES  #")
 	log.Println("################################")

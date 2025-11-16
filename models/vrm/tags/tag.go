@@ -1,123 +1,16 @@
 package tags
 
 import (
-	"encoding/json"
 	"fmt"
-	"time"
+
+	"github.com/Zillaforge/cloud-sdk/models/vrm/common"
 )
 
-// Repository represents a virtual image repository (shallow copy from repositories package).
-// This is a lightweight version used in tag responses to avoid circular dependencies.
-// It contains basic repository metadata without the full tag list.
-type Repository struct {
-	ID              string    `json:"id"`
-	Name            string    `json:"name"`
-	Namespace       string    `json:"namespace"`
-	OperatingSystem string    `json:"operatingSystem"`
-	Description     string    `json:"description,omitempty"`
-	Count           int       `json:"count"`
-	Creator         *IDName   `json:"creator,omitempty"`
-	Project         *IDName   `json:"project,omitempty"`
-	CreatedAt       time.Time `json:"createdAt"`
-	UpdatedAt       time.Time `json:"updatedAt"`
-}
+// Tag is an alias for common.Tag
+type Tag = common.Tag
 
-// IDName represents a lightweight reference to an entity.
-// It provides a minimal representation of entities like users or projects,
-// containing ID and optional name/display information.
-type IDName struct {
-	ID          string `json:"id"`
-	Name        string `json:"name,omitempty"`
-	Account     string `json:"account,omitempty"`
-	DisplayName string `json:"displayName,omitempty"`
-}
-
-// Tag represents a specific version/tag of an image within a repository.
-// Each tag contains metadata about a specific image version, including
-// its type, size, status, and any extra properties. Tags are associated
-// with a repository and track creation/update timestamps.
-type Tag struct {
-	ID           string                 `json:"id"`
-	Name         string                 `json:"name"`
-	RepositoryID string                 `json:"repositoryID"`
-	Type         string                 `json:"type"`
-	Size         int64                  `json:"size"`
-	Status       string                 `json:"status,omitempty"`
-	Extra        map[string]interface{} `json:"extra,omitempty"`
-	CreatedAt    time.Time              `json:"createdAt"`
-	UpdatedAt    time.Time              `json:"updatedAt"`
-	Repository   *Repository            `json:"repository"`
-}
-
-// Validate validates the Tag struct.
-// It ensures all required fields are present and have valid values,
-// including non-empty ID, name, repositoryID, type, and non-negative size.
-func (t *Tag) Validate() error {
-	if t == nil {
-		return fmt.Errorf("tag cannot be nil")
-	}
-	if t.ID == "" {
-		return fmt.Errorf("id cannot be empty")
-	}
-	if t.Name == "" {
-		return fmt.Errorf("name cannot be empty")
-	}
-	if t.RepositoryID == "" {
-		return fmt.Errorf("repositoryID cannot be empty")
-	}
-	if t.Type == "" {
-		return fmt.Errorf("type cannot be empty")
-	}
-	if t.Size < 0 {
-		return fmt.Errorf("size cannot be negative")
-	}
-	return nil
-}
-
-// MarshalJSON marshals Tag to JSON with RFC3339 timestamps.
-// It customizes JSON marshaling to format timestamp fields as RFC3339 strings.
-func (t *Tag) MarshalJSON() ([]byte, error) {
-	type Alias Tag
-	return json.Marshal(&struct {
-		CreatedAt string `json:"createdAt"`
-		UpdatedAt string `json:"updatedAt"`
-		*Alias
-	}{
-		CreatedAt: t.CreatedAt.Format(time.RFC3339),
-		UpdatedAt: t.UpdatedAt.Format(time.RFC3339),
-		Alias:     (*Alias)(t),
-	})
-}
-
-// UnmarshalJSON unmarshals JSON to Tag with RFC3339 timestamp parsing.
-// It customizes JSON unmarshaling to parse RFC3339 timestamp strings into time.Time values.
-func (t *Tag) UnmarshalJSON(data []byte) error {
-	type Alias Tag
-	aux := &struct {
-		CreatedAt string `json:"createdAt"`
-		UpdatedAt string `json:"updatedAt"`
-		*Alias
-	}{
-		Alias: (*Alias)(t),
-	}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return err
-	}
-	var err error
-	if aux.CreatedAt != "" {
-		t.CreatedAt, err = time.Parse(time.RFC3339, aux.CreatedAt)
-		if err != nil {
-			return fmt.Errorf("failed to parse createdAt: %w", err)
-		}
-	}
-	if aux.UpdatedAt != "" {
-		t.UpdatedAt, err = time.Parse(time.RFC3339, aux.UpdatedAt)
-		if err != nil {
-			return fmt.Errorf("failed to parse updatedAt: %w", err)
-		}
-	}
-	return nil
-}
+// Repository is an alias for common.Repository
+type Repository = common.Repository
 
 // CreateTagRequest represents a request to create a new tag.
 // It includes the tag name, type, and format specifications (disk and container).
@@ -222,6 +115,6 @@ func (o *ListTagsOptions) Validate() error {
 // ListTagsResponse represents the response from listing tags.
 // It contains the array of tags and the total count for pagination.
 type ListTagsResponse struct {
-	Tags  []*Tag `json:"tags"`
-	Total int    `json:"total"`
+	Tags  []*common.Tag `json:"tags"`
+	Total int           `json:"total"`
 }
