@@ -32,8 +32,8 @@ tests/
 Go 1.21+: Follow standard conventions
 
 ## Recent Changes
+- 011-vps-snapshot: Added [if applicable, e.g., PostgreSQL, CoreData, files or N/A]
 - 008-volumes-api: Added Go 1.21+
-- 009-iam-api: Added Go 1.21+ + Go standard library only (net/http, encoding/json, context, time, fmt)
 - 009-iam-api: Added Go 1.21+ + Go standard library only (net/http, encoding/json, context, time, fmt)
 
 

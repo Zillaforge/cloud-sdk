@@ -12,6 +12,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/snapshots"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/volumetypes"
 )
@@ -69,6 +70,11 @@ func (c *Client) SecurityGroups() *securitygroups.Client {
 // Servers returns the servers operations client.
 func (c *Client) Servers() *servers.Client {
 	return servers.NewClient(c.baseClient, c.projectID)
+}
+
+// Snapshots returns the snapshots operations client.
+func (c *Client) Snapshots() *snapshots.Client {
+	return snapshots.NewClient(c.baseClient, c.projectID)
 }
 
 // VolumeTypes returns the volume types operations client.

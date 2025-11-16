@@ -95,6 +95,39 @@ func TestClient_Servers(t *testing.T) {
 	}
 }
 
+// TestClient_Snapshots tests that Snapshots() returns a SnapshotsClient
+func TestClient_Snapshots(t *testing.T) {
+	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
+
+	snapshotsClient := client.Snapshots()
+
+	if snapshotsClient == nil {
+		t.Fatal("expected SnapshotsClient, got nil")
+	}
+}
+
+// TestClient_VolumeTypes tests that VolumeTypes() returns a VolumeTypesClient
+func TestClient_VolumeTypes(t *testing.T) {
+	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
+
+	volumeTypesClient := client.VolumeTypes()
+
+	if volumeTypesClient == nil {
+		t.Fatal("expected VolumeTypesClient, got nil")
+	}
+}
+
+// TestClient_Volumes tests that Volumes() returns a VolumesClient
+func TestClient_Volumes(t *testing.T) {
+	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
+
+	volumesClient := client.Volumes()
+
+	if volumesClient == nil {
+		t.Fatal("expected VolumesClient, got nil")
+	}
+}
+
 // TestClient_AllAccessors tests all accessor methods in one test
 func TestClient_AllAccessors(t *testing.T) {
 	client := NewClient("https://api.example.com", "test-token", "proj-123", &http.Client{}, nil)
@@ -109,6 +142,9 @@ func TestClient_AllAccessors(t *testing.T) {
 		{"Keypairs", client.Keypairs()},
 		{"SecurityGroups", client.SecurityGroups()},
 		{"Servers", client.Servers()},
+		{"Snapshots", client.Snapshots()},
+		{"VolumeTypes", client.VolumeTypes()},
+		{"Volumes", client.Volumes()},
 	}
 
 	for _, accessor := range accessors {
