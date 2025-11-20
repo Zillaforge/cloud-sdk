@@ -23,6 +23,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/snapshots"
 	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
+	"github.com/Zillaforge/cloud-sdk/models/vrm/tags"
 	vps "github.com/Zillaforge/cloud-sdk/modules/vps/core"
 	serversResource "github.com/Zillaforge/cloud-sdk/modules/vps/servers"
 	vrm "github.com/Zillaforge/cloud-sdk/modules/vrm/core"
@@ -56,17 +57,19 @@ func main() {
 
 	// Define constants
 	networkName := "default"
-	securityGroupName := "default-sg-1"
+	securityGroupName := "default-sg"
 	keypairName := "default"
 	serverName := "default"
 	volumeName := "default"
+	repositoryName := "default"
 
 	baseURL := os.Getenv("API_HOST")
 	protocol := os.Getenv("API_PROTOCOL")
 	token := os.Getenv("API_TOKEN")
 	projectCode := os.Getenv("PROJECT_SYS_CODE")
 	passwordEnvVar := os.Getenv("VM_PASSWORD")
-	imageURL := "dss-public://" + os.Getenv("IMAGE_SOURCE")
+	imageURL := fmt.Sprintf("dss-public://%s/%s", os.Getenv("CS_BUCKET"), os.Getenv("SRC_IMAGE"))
+	downloadFilepath := fmt.Sprintf("dss-public://%s/%s-%s.img", os.Getenv("CS_BUCKET"), "download", time.Now().Format("20060102-150405"))
 	auto := os.Getenv("AUTO_EXECUTE") != "false" // default to true
 
 	// 1. 初始化客戶端
@@ -87,7 +90,7 @@ func main() {
 	}
 
 	// 3. 上傳Image到倉庫
-	if err := app.uploadImageToRepository(imageURL, auto); err != nil {
+	if err := app.uploadImageToRepository(repositoryName, imageURL, auto); err != nil {
 		log.Fatal(err)
 	}
 
@@ -117,7 +120,7 @@ func main() {
 	}
 
 	// 9. 建立 Server Snapshot
-	if err := app.createServerSnapshot(auto); err != nil {
+	if err := app.createServerSnapshot(downloadFilepath, auto); err != nil {
 		log.Fatal(err)
 	}
 
@@ -163,7 +166,7 @@ func confirmAction(action string) bool {
 	return input == "y" || input == "yes"
 }
 
-func (a *App) uploadImageToRepository(imageURL string, auto bool) error {
+func (a *App) uploadImageToRepository(repositoryName, imageURL string, auto bool) error {
 	log.Println("")
 
 	if !auto && !confirmAction("upload image to repository") {
@@ -172,7 +175,7 @@ func (a *App) uploadImageToRepository(imageURL string, auto bool) error {
 
 	// Upload to new repository "cirros" with tag "v1"
 	req := &repositories.UploadToNewRepositoryRequest{
-		Name:            "cirros",
+		Name:            repositoryName,
 		Version:         "v1",
 		Type:            "common",
 		DiskFormat:      "qcow2",
@@ -358,12 +361,11 @@ func (a *App) createServer(serverName, passwordEnvVar string, auto bool) error {
 	log.Printf("Server (%s) Creating", a.server.ID)
 
 	// Step 7: Wait for server to become active
-	// log.Printf("Waiting for server to become active...")
 	err = vps.WaitForServerActive(a.ctx, a.vpsClient.Servers(), a.server.ID)
 	if err != nil {
 		return err
 	}
-	log.Printf("Server (%s) Actived", a.server.ID)
+	log.Printf("Server (%s) Active", a.server.ID)
 
 	return nil
 }
@@ -462,7 +464,7 @@ func (a *App) createVolumeSnapshot(auto bool) error {
 	return nil
 }
 
-func (a *App) createServerSnapshot(auto bool) error {
+func (a *App) createServerSnapshot(filepath string, auto bool) error {
 	log.Println("")
 
 	if !auto && !confirmAction("create server snapshot") {
@@ -489,6 +491,16 @@ func (a *App) createServerSnapshot(auto bool) error {
 		return fmt.Errorf("failed to wait for tag to become available: %w", err)
 	}
 	log.Printf("Server snapshot tag (%s) Available", repoResource.Tag.ID)
+
+	// TODO: Before VRM is patched, tags created by VRM require additional metadata
+	// to be added to the OpenStack Image. Otherwise, Download() will throw an error.
+	err = a.vrmClient.Tags().Download(a.ctx, repoResource.Tag.ID, &tags.DownloadTagRequest{
+		Filepath: filepath,
+	})
+
+	if err != nil {
+		return fmt.Errorf("failed to dowload tag: %w", err)
+	}
 
 	return nil
 }

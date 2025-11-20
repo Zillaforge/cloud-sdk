@@ -4,6 +4,8 @@
 @TOKEN = {{$dotenv API_TOKEN}}
 @SERVICE = vrm
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+@IMAGE_DEST={{$dotenv CS_BUCKET}}/{{$dotenv DST_IMAGE}}
+
 
 ######## Tag  API ###########
 
@@ -39,3 +41,15 @@ Authorization: Bearer {{TOKEN}}
 DELETE {{BASE_URL}}/tag/{{testTagId}}
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
+
+
+
+### Download Tag
+# @name TagDownload
+POST {{BASE_URL}}/tag/{{testTagId}}/download
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "filepath": "dss-public://{{IMAGE_DEST}}"
+}

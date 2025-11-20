@@ -2,6 +2,7 @@ package tags
 
 import (
 	"context"
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -423,6 +424,153 @@ func TestClient_DeleteWithNamespace(t *testing.T) {
 
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
+			}
+		})
+	}
+}
+
+// T120: Contract test for Download Tag
+// Verify POST /project/{project-id}/tag/{tag-id}/download
+func TestClient_Download(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodPost {
+			t.Errorf("expected POST, got %s", r.Method)
+		}
+		expectedPath := "/api/v1/project/proj-123/tag/tag-123/download"
+		if r.URL.Path != expectedPath {
+			t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+		}
+
+		var payload struct {
+			Filepath string `json:"filepath"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+			t.Fatalf("failed to decode body: %v", err)
+		}
+		if payload.Filepath != "dss-public://bucket/image" {
+			t.Errorf("expected filepath dss-public://bucket/image, got %s", payload.Filepath)
+		}
+
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer server.Close()
+
+	httpClient := &http.Client{Timeout: 5 * time.Second}
+	baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+	client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+	req := &tags.DownloadTagRequest{Filepath: "dss-public://bucket/image"}
+	if err := client.Download(context.Background(), "tag-123", req); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// T121: Contract test for Download Tag with Namespace and validation flows
+func TestClient_DownloadWithNamespace(t *testing.T) {
+	tests := []struct {
+		name             string
+		tagID            string
+		namespace        string
+		req              *tags.DownloadTagRequest
+		wantErr          bool
+		shouldHitServer  bool
+		expectedFilepath string
+	}{
+		{
+			name:             "download with namespace",
+			tagID:            "tag-123",
+			namespace:        "public",
+			req:              &tags.DownloadTagRequest{Filepath: "dss-public://bucket/image"},
+			shouldHitServer:  true,
+			expectedFilepath: "dss-public://bucket/image",
+		},
+		{
+			name:             "download without namespace",
+			tagID:            "tag-123",
+			namespace:        "",
+			req:              &tags.DownloadTagRequest{Filepath: "dss-public://bucket/image2"},
+			shouldHitServer:  true,
+			expectedFilepath: "dss-public://bucket/image2",
+		},
+		{
+			name:      "missing tag ID",
+			tagID:     "",
+			namespace: "public",
+			req:       &tags.DownloadTagRequest{Filepath: "dss-public://bucket/image"},
+			wantErr:   true,
+		},
+		{
+			name:      "nil request",
+			tagID:     "tag-123",
+			namespace: "public",
+			req:       nil,
+			wantErr:   true,
+		},
+		{
+			name:      "invalid request",
+			tagID:     "tag-123",
+			namespace: "public",
+			req: &tags.DownloadTagRequest{
+				Filepath: "",
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			called := false
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				called = true
+				if r.Method != http.MethodPost {
+					t.Errorf("expected POST, got %s", r.Method)
+				}
+				expectedPath := "/api/v1/project/proj-123/tag/tag-123/download"
+				if r.URL.Path != expectedPath {
+					t.Errorf("expected path %s, got %s", expectedPath, r.URL.Path)
+				}
+
+				if tt.namespace != "" {
+					if got := r.Header.Get("X-Namespace"); got != tt.namespace {
+						t.Errorf("expected X-Namespace %q, got %q", tt.namespace, got)
+					}
+				} else if r.Header.Get("X-Namespace") != "" {
+					t.Errorf("expected no X-Namespace header, got %q", r.Header.Get("X-Namespace"))
+				}
+
+				var payload struct {
+					Filepath string `json:"filepath"`
+				}
+				if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+					t.Fatalf("failed to decode body: %v", err)
+				}
+				if payload.Filepath != tt.expectedFilepath {
+					t.Errorf("expected filepath %s, got %s", tt.expectedFilepath, payload.Filepath)
+				}
+
+				w.WriteHeader(http.StatusOK)
+			}))
+			defer server.Close()
+
+			httpClient := &http.Client{Timeout: 5 * time.Second}
+			baseClient := internalhttp.NewClient(server.URL, "test-token", httpClient, nil)
+			client := NewClient(baseClient, "proj-123", "/api/v1/project/proj-123")
+
+			err := client.DownloadWithNamespace(context.Background(), tt.tagID, tt.req, tt.namespace)
+
+			if tt.wantErr {
+				if err == nil {
+					t.Fatalf("expected error, got nil")
+				}
+			} else if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+
+			if tt.shouldHitServer && !called {
+				t.Fatalf("expected server to be called")
+			}
+			if !tt.shouldHitServer && called {
+				t.Fatalf("did not expect server call")
 			}
 		})
 	}

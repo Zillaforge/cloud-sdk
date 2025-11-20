@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/url"
+	"strings"
 
 	internalhttp "github.com/Zillaforge/cloud-sdk/internal/http"
 	tagmod "github.com/Zillaforge/cloud-sdk/models/vrm/tags"
@@ -187,6 +188,46 @@ func (c *Client) DeleteWithNamespace(ctx context.Context, tagID string, namespac
 
 	if err := c.baseClient.Do(ctx, req, nil); err != nil {
 		return fmt.Errorf("failed to delete tag %s: %w", tagID, err)
+	}
+
+	return nil
+}
+
+// Download exports the image behind a tag to external storage.
+// POST /api/v1/project/{project-id}/tag/{tag-id}/download
+func (c *Client) Download(ctx context.Context, tagID string, req *tagmod.DownloadTagRequest) error {
+	return c.DownloadWithNamespace(ctx, tagID, req, "")
+}
+
+// DownloadWithNamespace exports the tag image with optional namespace scoping via X-Namespace header.
+// POST /api/v1/project/{project-id}/tag/{tag-id}/download
+func (c *Client) DownloadWithNamespace(ctx context.Context, tagID string, req *tagmod.DownloadTagRequest, namespace string) error {
+	if strings.TrimSpace(tagID) == "" {
+		return fmt.Errorf("tag ID cannot be empty")
+	}
+	if req == nil {
+		return fmt.Errorf("download request cannot be nil")
+	}
+	if err := req.Validate(); err != nil {
+		return fmt.Errorf("invalid download request: %w", err)
+	}
+
+	path := c.basePath + "/tag/" + url.PathEscape(tagID) + "/download"
+
+	headers := make(map[string]string)
+	if namespace != "" {
+		headers["X-Namespace"] = namespace
+	}
+
+	httpReq := &internalhttp.Request{
+		Method:  "POST",
+		Path:    path,
+		Body:    req,
+		Headers: headers,
+	}
+
+	if err := c.baseClient.Do(ctx, httpReq, nil); err != nil {
+		return fmt.Errorf("failed to download tag %s: %w", tagID, err)
 	}
 
 	return nil

@@ -2,6 +2,7 @@ package tags
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/Zillaforge/cloud-sdk/models/vrm/common"
 )
@@ -82,6 +83,23 @@ type UpdateTagRequest struct {
 func (r *UpdateTagRequest) Validate() error {
 	if r == nil {
 		return fmt.Errorf("request cannot be nil")
+	}
+	return nil
+}
+
+// DownloadTagRequest represents a request to download an image for a tag into cloud storage.
+// The filepath must point to a valid destination such as dss-public://bucket/path.
+type DownloadTagRequest struct {
+	Filepath string `json:"filepath"`
+}
+
+// Validate ensures the download request contains the required filepath destination.
+func (r *DownloadTagRequest) Validate() error {
+	if r == nil {
+		return fmt.Errorf("request cannot be nil")
+	}
+	if strings.TrimSpace(r.Filepath) == "" {
+		return fmt.Errorf("filepath cannot be empty")
 	}
 	return nil
 }

@@ -5,7 +5,7 @@
 @SERVICE = vrm
 @BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
 @VPS_BASE_URL={{PROTOCOL}}://{{HOST}}/vps/api/v1/project/{{PROJECT}}
-@IMAGE_SOURCE={{$dotenv IMAGE_SOURCE}}
+@IMAGE_SOURCE={{$dotenv CS_BUCKET}}/{{$dotenv SRC_IMAGE}}
 
 
 ### List Server

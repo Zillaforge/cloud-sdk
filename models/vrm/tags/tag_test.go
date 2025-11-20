@@ -458,3 +458,50 @@ func TestListTagsOptionsValidate(t *testing.T) {
 		})
 	}
 }
+
+// T110: Unit test for DownloadTagRequest validation - required filepath field
+func TestDownloadTagRequestValidate(t *testing.T) {
+	tests := []struct {
+		name      string
+		req       *DownloadTagRequest
+		expectErr bool
+		errMsg    string
+	}{
+		{
+			name: "valid request",
+			req: &DownloadTagRequest{
+				Filepath: "dss-public://bucket/image.raw",
+			},
+			expectErr: false,
+		},
+		{
+			name:      "nil request",
+			req:       nil,
+			expectErr: true,
+			errMsg:    "request cannot be nil",
+		},
+		{
+			name: "empty filepath",
+			req: &DownloadTagRequest{
+				Filepath: "",
+			},
+			expectErr: true,
+			errMsg:    "filepath cannot be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := tt.req.Validate()
+			if tt.expectErr && err == nil {
+				t.Fatalf("expected error, got nil")
+			}
+			if !tt.expectErr && err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if tt.expectErr && err != nil && !contains(err.Error(), tt.errMsg) {
+				t.Fatalf("expected error containing %q, got %q", tt.errMsg, err.Error())
+			}
+		})
+	}
+}
