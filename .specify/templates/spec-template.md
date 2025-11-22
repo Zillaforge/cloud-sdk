@@ -5,15 +5,6 @@
 **Status**: Draft  
 **Input**: User description: "$ARGUMENTS"
 
-## Constitution Constraints (must reflect in requirements & tests)
-
-- SDK surface MUST be an idiomatic Go package: construct a Client and call methods;
-  callers MUST NOT manage raw HTTP details.
-- All public APIs MUST accept `context.Context` and return typed results and errors.
-- Tests are written first (unit + contract tests per Swagger/OpenAPI) and MUST pass.
-- External dependencies MUST be minimized and justified.
-- Breaking changes MUST be called out with migration notes; use semantic versioning.
-
 ## User Scenarios & Testing *(mandatory)*
 
 <!--
@@ -98,13 +89,6 @@
 - **FR-003**: Users MUST be able to [key interaction, e.g., "reset their password"]
 - **FR-004**: System MUST [data requirement, e.g., "persist user preferences"]
 - **FR-005**: System MUST [behavior, e.g., "log all security events"]
-
-### SDK Contract Requirements (Go)
-
-- Public methods follow the pattern: `Client.Resource.Operation(ctx, params)`.
-- Responses are strongly-typed structs matching Swagger models.
-- Errors wrap context (status code, service error fields) without exposing raw HTTP.
-- Authentication, retries, and timeouts are centralized in the Client.
 
 *Example of marking unclear requirements:*
 
