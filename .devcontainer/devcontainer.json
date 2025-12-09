@@ -6,7 +6,7 @@
 		"dockerfile": "Dockerfile",
 		"args": {
 			// go version and arch
-			"GO_VER": "1.24.3",
+			"GO_VER": "1.22.4",
 			"GO_ARCH": "alpine",
 			// install kubectl version
 			"INSTALL_KUBECTL": "false",

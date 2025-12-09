@@ -17,20 +17,20 @@ FROM golang:${GO_VER}-${GO_ARCH}
 
 
 # Install Golang extension package tools
-RUN go install github.com/ramya-rao-a/go-outline@latest         && \
-    go install github.com/cweill/gotests/gotests@latest         && \
-    go install github.com/fatih/gomodifytags@latest             && \
-    go install github.com/josharian/impl@latest                 && \
-    go install github.com/haya14busa/goplay/cmd/goplay@latest   && \
-    go install github.com/go-delve/delve/cmd/dlv@latest         && \
-    go install honnef.co/go/tools/cmd/staticcheck@latest        && \
-    go install golang.org/x/tools/gopls@latest                  && \
-    go install golang.org/x/tools/cmd/goimports@latest          && \
-    go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
+RUN go install github.com/ramya-rao-a/go-outline@v0.0.0-20210608161538-9736a4bde949    && \
+    go install github.com/cweill/gotests/gotests@v1.7.0                                && \
+    go install github.com/fatih/gomodifytags@v1.17.0                                   && \
+    go install github.com/josharian/impl@v1.4.0                                        && \
+    go install github.com/haya14busa/goplay/cmd/goplay@v1.0.0                          && \
+    go install github.com/go-delve/delve/cmd/dlv@v1.25.2                               && \
+    go install honnef.co/go/tools/cmd/staticcheck@v0.4.7                               && \
+    go install golang.org/x/tools/gopls@v0.15.3                                        && \
+    go install golang.org/x/tools/cmd/goimports@v0.30.0                                && \
+    go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
 
 ARG GO_ARCH
 RUN if [ "${GO_ARCH}" == "alpine" ]; then \
-        apk add zsh-vcs make libc6-compat bash; \
+        apk add zsh-vcs make libc6-compat git bash; \
     fi
 
 RUN sh -c "$(wget -O- https://github.com/deluan/zsh-in-docker/releases/download/v1.2.1/zsh-in-docker.sh)" -- \
