@@ -1,0 +1,136 @@
+@PROTOCOL = {{$dotenv API_PROTOCOL}}
+@HOST = {{$dotenv API_HOST}}
+@PROJECT = {{$dotenv PROJECT_ID}}
+@TOKEN = {{$dotenv API_TOKEN}}
+@SERVICE = vps
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+
+
+### List Networks (for network_id)
+# @name NetworkList
+GET {{BASE_URL}}/networks HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@networkId={{NetworkList.response.body.$.networks[0].id}}
+
+
+### Create Share
+# @name ShareCreate
+POST {{BASE_URL}}/shares HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-share",
+    "description": "Test file share",
+    "network_id": "{{networkId}}",
+    "size": 1
+}
+
+@testShareId={{ShareCreate.response.body.$.id}}
+
+
+### List Shares
+# @name ShareList
+GET {{BASE_URL}}/shares HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### List Shares with Detail (including rules)
+# @name ShareListDetail
+GET {{BASE_URL}}/shares
+?detail=true HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### List Shares by Name
+# @name ShareListByName
+GET {{BASE_URL}}/shares
+?name=test-share HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Get Specific Share
+# @name ShareGet
+GET {{BASE_URL}}/shares/{{testShareId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Update Share
+# @name ShareUpdate
+PUT {{BASE_URL}}/shares/{{testShareId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "updated-share",
+    "description": "Updated description"
+}
+
+
+### Extend Share
+# @name ShareExtend
+POST {{BASE_URL}}/shares/{{testShareId}}/extend HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "new_size": 2
+}
+
+
+### Create Share Rule (Read-Write Access)
+# @name ShareRuleCreateRW
+POST {{BASE_URL}}/shares/{{testShareId}}/rules HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "cidr": "10.50.0.0/24",
+    "level": "rw"
+}
+
+@testShareRuleId={{ShareRuleCreateRW.response.body.$.rules[-1:].id}}
+
+
+### Create Share Rule (Read-Only Access)
+# @name ShareRuleCreateRO
+POST {{BASE_URL}}/shares/{{testShareId}}/rules HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "cidr": "192.168.1.0/24",
+    "level": "ro"
+}
+
+
+### Create Share Rule (Allow All)
+# @name ShareRuleCreateAll
+POST {{BASE_URL}}/shares/{{testShareId}}/rules HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "cidr": "0.0.0.0/0",
+    "level": "rw"
+}
+
+
+### Delete Share Rule
+# @name ShareRuleDelete
+DELETE {{BASE_URL}}/shares/{{testShareId}}/rules/{{testShareRuleId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Delete Share
+# @name ShareDelete
+DELETE {{BASE_URL}}/shares/{{testShareId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}

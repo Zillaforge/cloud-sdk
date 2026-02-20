@@ -1,0 +1,288 @@
+@PROTOCOL = {{$dotenv API_PROTOCOL}}
+@HOST = {{$dotenv API_HOST}}
+@PROJECT = {{$dotenv PROJECT_ID}}
+@TOKEN = {{$dotenv API_TOKEN}}
+@SERVICE = vps
+@BASE_URL = {{PROTOCOL}}://{{HOST}}/{{SERVICE}}/api/v1/project/{{PROJECT}}
+
+
+########### Prerequisites - 取得建立 LB 所需資源 ###########
+
+### List Networks (取得 network_id)
+# @name NetworkList
+GET {{BASE_URL}}/networks HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@networkId={{NetworkList.response.body.$.networks[0].id}}
+
+
+### List Servers (取得後端 VM 列表)
+# @name ServerList
+GET {{BASE_URL}}/servers HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@serverId={{ServerList.response.body.$.servers[0].id}}
+@serverName={{ServerList.response.body.$.servers[0].name}}
+
+
+### List Server NICs (取得 VM 的內部 IP，作為 Pool Member 使用)
+# @name ServerNICList
+GET {{BASE_URL}}/servers/{{serverId}}/nics HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@memberAddress={{ServerNICList.response.body.$.nics[0].addresses[0]}}
+
+
+########### Load Balancer CRUD ###########
+
+### Create Load Balancer (含 Listener + Pool + Member 一次建立)
+# @name LBCreate
+POST {{BASE_URL}}/loadbalancers HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-lb",
+    "description": "Test load balancer",
+    "network_id": "{{networkId}}",
+    "listeners": [
+        {
+            "name": "test-listener-tcp",
+            "protocol": "TCP",
+            "protocol_port": 22,
+            "timeout_member_connect": 5000,
+            "timeout_member_data": 50000,
+            "pool": {
+                "name": "test-pool-tcp",
+                "protocol": "TCP",
+                "member_port": 22,
+                "method": "ROUND_ROBIN",
+                "members": [
+                    {
+                        "name": "{{serverName}}",
+                        "address": "{{memberAddress}}"
+                    }
+                ]
+            }
+        }
+    ]
+}
+
+@testLBId={{LBCreate.response.body.$.id}}
+
+
+### List Load Balancers
+# @name LBList
+GET {{BASE_URL}}/loadbalancers HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### List Load Balancers with Detail (含 listener/pool 資訊)
+# @name LBListDetail
+GET {{BASE_URL}}/loadbalancers
+?detail=true HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Get Specific Load Balancer
+# @name LBGet
+GET {{BASE_URL}}/loadbalancers/{{testLBId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Update Load Balancer
+# @name LBUpdate
+PUT {{BASE_URL}}/loadbalancers/{{testLBId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "updated-lb",
+    "description": "Updated load balancer"
+}
+
+
+### Associate Floating IP to Load Balancer
+# @name LBAssociateFIP
+POST {{BASE_URL}}/loadbalancers/{{testLBId}}/floatingip HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+
+}
+
+
+########### Listener CRUD ###########
+
+### List Listeners
+# @name ListenerList
+GET {{BASE_URL}}/loadbalancers/{{testLBId}}/listeners HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@testListenerId={{ListenerList.response.body.$.listeners[0].id}}
+
+
+### Create Listener (TCP)
+# @name ListenerCreate
+POST {{BASE_URL}}/loadbalancers/{{testLBId}}/listeners HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-listener-tcp-2222",
+    "protocol": "TCP",
+    "protocol_port": 2222,
+    "timeout_member_connect": 5000,
+    "timeout_member_data": 50000,
+    "allowed_cidrs": [
+        "0.0.0.0/0"
+    ]
+}
+
+@newListenerId={{ListenerCreate.response.body.$.id}}
+
+
+### Get Specific Listener
+# @name ListenerGet
+GET {{BASE_URL}}/loadbalancers/{{testLBId}}/listeners/{{testListenerId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Update Listener
+# @name ListenerUpdate
+PUT {{BASE_URL}}/loadbalancers/{{testLBId}}/listeners/{{testListenerId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "updated-listener",
+    "timeout_member_data": 60000,
+    "allowed_cidrs": [
+        "0.0.0.0/0"
+    ]
+}
+
+
+### Delete Listener
+# @name ListenerDelete
+DELETE {{BASE_URL}}/loadbalancers/{{testLBId}}/listeners/{{newListenerId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+########### Pool CRUD ###########
+
+### List Pools
+# @name PoolList
+GET {{BASE_URL}}/loadbalancers/{{testLBId}}/pools HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+@testPoolId={{PoolList.response.body.$.pools[0].id}}
+@testMemberId={{PoolList.response.body.$.pools[0].members[0].id}}
+
+
+### Create Pool
+# @name PoolCreate
+POST {{BASE_URL}}/loadbalancers/{{testLBId}}/pools HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "test-pool-tcp-2",
+    "protocol": "TCP",
+    "member_port": 22,
+    "method": "LEAST_CONNECTIONS",
+    "members": [
+        {
+            "name": "{{serverName}}",
+            "address": "{{memberAddress}}"
+        }
+    ]
+}
+
+@newPoolId={{PoolCreate.response.body.$.id}}
+
+
+### Get Specific Pool
+# @name PoolGet
+GET {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+### Update Pool
+# @name PoolUpdate
+PUT {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "updated-pool",
+    "method": "SOURCE_IP",
+    "member_port": 22
+}
+
+
+### Delete Pool
+# @name PoolDelete
+DELETE {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{newPoolId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+########### Pool Member CRUD ###########
+
+### Add Member to Pool
+# @name MemberCreate
+POST {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}}/members HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "name": "{{serverName}}",
+    "address": "{{memberAddress}}"
+}
+
+@newMemberId={{MemberCreate.response.body.$.members[-1:].id}}
+
+
+### Batch Update Members in Pool (覆蓋整個 member 清單)
+# @name MemberBatchUpdate
+PUT {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}}/members HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+{
+    "members": [
+        {
+            "name": "{{serverName}}",
+            "address": "{{memberAddress}}"
+        }
+    ]
+}
+
+
+### Delete Member from Pool
+# @name MemberDelete
+DELETE {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}}/members/{{testMemberId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
+
+
+########### Teardown ###########
+
+### Delete Load Balancer (同時刪除所有 listener/pool/member)
+# @name LBDelete
+DELETE {{BASE_URL}}/loadbalancers/{{testLBId}} HTTP/1.1
+content-type: application/json
+Authorization: Bearer {{TOKEN}}
