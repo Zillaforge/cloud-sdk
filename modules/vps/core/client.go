@@ -12,6 +12,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/shares"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/snapshots"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/volumetypes"
@@ -80,6 +81,11 @@ func (c *Client) Snapshots() *snapshots.Client {
 // VolumeTypes returns the volume types operations client.
 func (c *Client) VolumeTypes() *volumetypes.Client {
 	return volumetypes.NewClient(c.baseClient, c.projectID)
+}
+
+// Shares returns the shares operations client.
+func (c *Client) Shares() *shares.Client {
+	return shares.NewClient(c.baseClient, c.projectID)
 }
 
 // Volumes returns the volumes operations client.

@@ -20,6 +20,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
+	"github.com/Zillaforge/cloud-sdk/models/vps/shares"
 	"github.com/Zillaforge/cloud-sdk/models/vps/snapshots"
 	"github.com/Zillaforge/cloud-sdk/models/vps/volumes"
 	"github.com/Zillaforge/cloud-sdk/models/vrm/repositories"
@@ -43,6 +44,7 @@ type App struct {
 	server            *serversResource.ServerResource
 	floatingIP        *floatingips.FloatingIP
 	volume            *volumes.Volume
+	shareID           string
 	repositoryID      string
 	imageRepositoryID string
 }
@@ -129,7 +131,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 11. 刪除所有資源
+	// 12. 建立 Share
+	if err := app.createShare(auto); err != nil {
+		log.Fatal(err)
+	}
+
+	// 12. 刪除所有資源
 	if err := app.deleteAllResources(auto); err != nil {
 		log.Fatal(err)
 	}
@@ -556,6 +563,55 @@ func (a *App) associateFloatingIP(networkName string, auto bool) error {
 	return nil
 }
 
+func (a *App) createShare(auto bool) error {
+	log.Println("")
+
+	if !auto && !confirmAction("create share") {
+		return fmt.Errorf("user cancelled create share")
+	}
+
+	// Create a new share on the default network
+	share, err := a.vpsClient.Shares().Create(a.ctx, &shares.CreateShareRequest{
+		Name:      "default-share",
+		NetworkID: a.defaultNetworkID,
+		Size:      10, // 10 GB
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create share: %w", err)
+	}
+
+	a.shareID = share.ID
+	log.Printf("Share (%s) Creating", a.shareID)
+
+	// Wait for share to become available
+	if err := vps.WaitForShareAvailable(a.ctx, a.vpsClient.Shares(), a.shareID); err != nil {
+		return fmt.Errorf("failed to wait for share to become available: %w", err)
+	}
+	log.Printf("Share (%s) Available", a.shareID)
+
+	// Add a read-write access rule for a CIDR block
+	updatedShare, err := a.vpsClient.Shares().AddRule(a.ctx, a.shareID, &shares.AddShareRuleRequest{
+		CIDR:  "10.0.0.0/24",
+		Level: string(shares.ShareRuleLevelRW),
+	})
+	if err != nil {
+		return fmt.Errorf("failed to add share rule: %w", err)
+	}
+	log.Printf("Share (%s) Rule Added (total rules: %d)", a.shareID, len(updatedShare.Rules))
+
+	// Remove the rule we just added
+	if len(updatedShare.Rules) > 0 {
+		ruleID := updatedShare.Rules[len(updatedShare.Rules)-1].ID
+		updatedShare, err = a.vpsClient.Shares().RemoveRule(a.ctx, a.shareID, ruleID)
+		if err != nil {
+			return fmt.Errorf("failed to remove share rule: %w", err)
+		}
+		log.Printf("Share (%s) Rule Removed (remaining rules: %d)", a.shareID, len(updatedShare.Rules))
+	}
+
+	return nil
+}
+
 func (a *App) deleteAllResources(auto bool) error {
 	log.Println("")
 
@@ -715,7 +771,16 @@ func (a *App) deleteAllResources(auto bool) error {
 		log.Printf("Security group (%s) Deleted", a.securityGroupID)
 	}
 
-	// 11-10: Delete Repositories
+	// 11-10: Delete Share
+	log.Println("")
+	if a.shareID != "" {
+		if err := a.vpsClient.Shares().Delete(a.ctx, a.shareID); err != nil {
+			return fmt.Errorf("failed to delete share: %w", err)
+		}
+		log.Printf("Share (%s) Deleted", a.shareID)
+	}
+
+	// 11-11: Delete Repositories
 	log.Println("")
 	for _, repo := range []string{a.repositoryID, a.imageRepositoryID} {
 		if repo != "" {
