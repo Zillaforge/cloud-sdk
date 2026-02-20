@@ -17,6 +17,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/models/vps/flavors"
 	"github.com/Zillaforge/cloud-sdk/models/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/models/vps/keypairs"
+	lbmodels "github.com/Zillaforge/cloud-sdk/models/vps/loadbalancers"
 	"github.com/Zillaforge/cloud-sdk/models/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/models/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/models/vps/servers"
@@ -47,6 +48,8 @@ type App struct {
 	shareID           string
 	repositoryID      string
 	imageRepositoryID string
+	loadBalancerID    string
+	loadBalancerFIPID string
 }
 
 func main() {
@@ -136,7 +139,12 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// 12. 刪除所有資源
+	// 13. 建立 Load Balancer (E2E lifecycle)
+	if err := app.createLoadBalancer(auto); err != nil {
+		log.Fatal(err)
+	}
+
+	// 14. 刪除所有資源
 	if err := app.deleteAllResources(auto); err != nil {
 		log.Fatal(err)
 	}
@@ -608,6 +616,101 @@ func (a *App) createShare(auto bool) error {
 	return nil
 }
 
+func (a *App) createLoadBalancer(auto bool) error {
+	log.Println("")
+
+	if !auto && !confirmAction("create load balancer (full lifecycle)") {
+		return fmt.Errorf("user cancelled create load balancer")
+	}
+
+	// Step 1: Get the server's internal IP from its NIC (used as pool member address)
+	nicList, err := a.server.NICs().List(a.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list server NICs: %w", err)
+	}
+
+	var memberAddress string
+	for _, nic := range nicList {
+		if nic.NetworkID == a.defaultNetworkID && len(nic.Addresses) > 0 {
+			memberAddress = nic.Addresses[0]
+			break
+		}
+	}
+	if memberAddress == "" {
+		return fmt.Errorf("could not find server IP on network %s", a.defaultNetworkID)
+	}
+	log.Printf("Using server IP %s as pool member address", memberAddress)
+
+	lbClient := a.vpsClient.LoadBalancers()
+
+	// Step 2: Create Load Balancer with a TCP listener (port 22 / SSH) and inline pool
+	// matching the VM that was already created (which only has TCP 22 open).
+	lbResource, err := lbClient.Create(a.ctx, &lbmodels.LoadBalancerCreateRequest{
+		Name:        "e2e-loadbalancer",
+		Description: "E2E test load balancer (SSH / TCP-22)",
+		NetworkID:   a.defaultNetworkID,
+		Listeners: []lbmodels.ListenerCreateRequest{
+			{
+				Name:                 "tcp-22-listener",
+				Protocol:             lbmodels.ListenerProtocolTCP,
+				ProtocolPort:         22,
+				TimeoutMemberConnect: 5000,
+				TimeoutMemberData:    50000,
+				Pool: &lbmodels.PoolCreateRequest{
+					Name:       "tcp-22-pool",
+					Protocol:   lbmodels.PoolProtocolTCP,
+					MemberPort: 22,
+					Method:     lbmodels.PoolMethodRoundRobin,
+					Members: []lbmodels.MemberCreateRequest{
+						{Name: a.server.Name, Address: memberAddress},
+					},
+				},
+			},
+		},
+	})
+	if err != nil {
+		return fmt.Errorf("failed to create load balancer: %w", err)
+	}
+	a.loadBalancerID = lbResource.ID
+	log.Printf("LoadBalancer (%s) Creating", a.loadBalancerID)
+
+	// Step 3: Wait for LB to become ACTIVE
+	if err := vps.WaitForLoadBalancerActive(a.ctx, lbClient, a.loadBalancerID); err != nil {
+		return fmt.Errorf("failed to wait for load balancer to become active: %w", err)
+	}
+	log.Printf("LoadBalancer (%s) Active", a.loadBalancerID)
+
+	// Step 4: Fetch the fresh resource to get sub-clients wired to this LB
+	lbResource, err = lbClient.Get(a.ctx, a.loadBalancerID)
+	if err != nil {
+		return fmt.Errorf("failed to get load balancer: %w", err)
+	}
+
+	// Step 5: List pools and add a second member via the Members() sub-client
+	pools, err := lbResource.Pools().List(a.ctx)
+	if err != nil {
+		return fmt.Errorf("failed to list pools: %w", err)
+	}
+	log.Printf("LoadBalancer (%s) has %d pool(s)", a.loadBalancerID, len(pools))
+
+	poolResource, err := lbResource.Pools().Get(a.ctx, pools[0].ID)
+	if err != nil {
+		return fmt.Errorf("failed to get pool: %w", err)
+	}
+
+	log.Printf("Pool (%s) has %d member(s)", poolResource.ID, len(poolResource.Pool.Members))
+
+	// Step 7: Associate a Floating IP to the LB VIP
+	fip, err := lbClient.AssociateFloatingIP(a.ctx, a.loadBalancerID, &lbmodels.AssociateFloatingIPRequest{})
+	if err != nil {
+		return fmt.Errorf("failed to associate floating IP: %w", err)
+	}
+	a.loadBalancerFIPID = fip.ID
+	log.Printf("FloatingIP (%s) Associated to LoadBalancer (%s)", fip.ID, a.loadBalancerID)
+
+	return nil
+}
+
 func (a *App) deleteAllResources(auto bool) error {
 	log.Println("")
 
@@ -767,7 +870,22 @@ func (a *App) deleteAllResources(auto bool) error {
 		log.Printf("Security group (%s) Deleted", a.securityGroupID)
 	}
 
-	// 11-10: Delete Share
+	// 11-10: Delete Load Balancer
+	log.Println("")
+	if a.loadBalancerID != "" {
+		if err := a.vpsClient.LoadBalancers().Delete(a.ctx, a.loadBalancerID); err != nil {
+			return fmt.Errorf("failed to delete load balancer: %w", err)
+		}
+		log.Printf("LoadBalancer (%s) Deleting", a.loadBalancerID)
+
+		if err := vps.WaitForLoadBalancerDeleted(a.ctx, a.vpsClient.LoadBalancers(), a.loadBalancerID); err != nil {
+			log.Printf("Warning: wait for LB deletion failed: %v", err)
+		} else {
+			log.Printf("LoadBalancer (%s) Deleted", a.loadBalancerID)
+		}
+	}
+
+	// 11-11: Delete Share
 	log.Println("")
 	if a.shareID != "" {
 		if err := a.vpsClient.Shares().Delete(a.ctx, a.shareID); err != nil {
@@ -776,7 +894,7 @@ func (a *App) deleteAllResources(auto bool) error {
 		log.Printf("Share (%s) Deleted", a.shareID)
 	}
 
-	// 11-11: Delete Repositories
+	// 11-12: Delete Repositories
 	log.Println("")
 	for _, repo := range []string{a.repositoryID, a.imageRepositoryID} {
 		if repo != "" {

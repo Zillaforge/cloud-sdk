@@ -80,6 +80,8 @@ GET {{BASE_URL}}/loadbalancers HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
+@testLBId={{LBList.response.body.$.load_balancers[0].id}}
+
 
 ### List Load Balancers with Detail (含 listener/pool 資訊)
 # @name LBListDetail
@@ -188,7 +190,6 @@ content-type: application/json
 Authorization: Bearer {{TOKEN}}
 
 @testPoolId={{PoolList.response.body.$.pools[0].id}}
-@testMemberId={{PoolList.response.body.$.pools[0].members[0].id}}
 
 
 ### Create Pool
@@ -218,6 +219,8 @@ Authorization: Bearer {{TOKEN}}
 GET {{BASE_URL}}/loadbalancers/{{testLBId}}/pools/{{testPoolId}} HTTP/1.1
 content-type: application/json
 Authorization: Bearer {{TOKEN}}
+
+@testMemberId={{PoolGet.response.body.$.members[0].id}}
 
 
 ### Update Pool

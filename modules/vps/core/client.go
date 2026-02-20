@@ -9,6 +9,7 @@ import (
 	"github.com/Zillaforge/cloud-sdk/modules/vps/flavors"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/floatingips"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/keypairs"
+	"github.com/Zillaforge/cloud-sdk/modules/vps/loadbalancers"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/networks"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/securitygroups"
 	"github.com/Zillaforge/cloud-sdk/modules/vps/servers"
@@ -91,4 +92,9 @@ func (c *Client) Shares() *shares.Client {
 // Volumes returns the volumes operations client.
 func (c *Client) Volumes() *volumes.Client {
 	return volumes.NewClient(c.baseClient, c.projectID)
+}
+
+// LoadBalancers returns the load balancers operations client.
+func (c *Client) LoadBalancers() *loadbalancers.Client {
+	return loadbalancers.NewClient(c.baseClient, c.projectID)
 }
