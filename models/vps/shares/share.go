@@ -123,15 +123,15 @@ func (r *ExtendShareRequest) Validate() error {
 	return nil
 }
 
-// AddShareRuleRequest represents parameters for adding an access rule to a share.
+// CreateShareRuleRequest represents parameters for creating an access rule on a share.
 // Matches ShareRuleCreateInput from vps.yaml.
-type AddShareRuleRequest struct {
+type CreateShareRuleRequest struct {
 	CIDR  string `json:"cidr"`  // Required: IP address or CIDR range (e.g., "10.50.0.0/24")
 	Level string `json:"level"` // Required: Access level ("rw" or "ro")
 }
 
-// Validate checks if the AddShareRuleRequest has valid values.
-func (r *AddShareRuleRequest) Validate() error {
+// Validate checks if the CreateShareRuleRequest has valid values.
+func (r *CreateShareRuleRequest) Validate() error {
 	if r.CIDR == "" {
 		return errors.New("cidr is required")
 	}

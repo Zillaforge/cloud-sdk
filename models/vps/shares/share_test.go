@@ -261,38 +261,38 @@ func TestExtendShareRequest_Validate(t *testing.T) {
 	}
 }
 
-func TestAddShareRuleRequest_Validate(t *testing.T) {
+func TestCreateShareRuleRequest_Validate(t *testing.T) {
 	tests := []struct {
 		name    string
-		req     *AddShareRuleRequest
+		req     *CreateShareRuleRequest
 		wantErr bool
 		errMsg  string
 	}{
 		{
 			name:    "valid rw",
-			req:     &AddShareRuleRequest{CIDR: "10.0.0.0/24", Level: "rw"},
+			req:     &CreateShareRuleRequest{CIDR: "10.0.0.0/24", Level: "rw"},
 			wantErr: false,
 		},
 		{
 			name:    "valid ro",
-			req:     &AddShareRuleRequest{CIDR: "0.0.0.0/0", Level: "ro"},
+			req:     &CreateShareRuleRequest{CIDR: "0.0.0.0/0", Level: "ro"},
 			wantErr: false,
 		},
 		{
 			name:    "missing cidr",
-			req:     &AddShareRuleRequest{CIDR: "", Level: "rw"},
+			req:     &CreateShareRuleRequest{CIDR: "", Level: "rw"},
 			wantErr: true,
 			errMsg:  "cidr is required",
 		},
 		{
 			name:    "missing level",
-			req:     &AddShareRuleRequest{CIDR: "10.0.0.0/24", Level: ""},
+			req:     &CreateShareRuleRequest{CIDR: "10.0.0.0/24", Level: ""},
 			wantErr: true,
 			errMsg:  "level is required",
 		},
 		{
 			name:    "invalid level",
-			req:     &AddShareRuleRequest{CIDR: "10.0.0.0/24", Level: "admin"},
+			req:     &CreateShareRuleRequest{CIDR: "10.0.0.0/24", Level: "admin"},
 			wantErr: true,
 			errMsg:  "level must be one of rw, ro",
 		},

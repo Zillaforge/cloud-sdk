@@ -589,25 +589,21 @@ func (a *App) createShare(auto bool) error {
 	}
 	log.Printf("Share (%s) Available", a.shareID)
 
+	// Get a fresh ShareResource to access the Rules sub-client
+	shareResource, err := a.vpsClient.Shares().Get(a.ctx, a.shareID)
+	if err != nil {
+		return fmt.Errorf("failed to get share: %w", err)
+	}
+
 	// Add a read-write access rule for a CIDR block
-	updatedShare, err := a.vpsClient.Shares().AddRule(a.ctx, a.shareID, &shares.AddShareRuleRequest{
+	rule, err := shareResource.Rules().Create(a.ctx, &shares.CreateShareRuleRequest{
 		CIDR:  "10.0.0.0/24",
 		Level: string(shares.ShareRuleLevelRW),
 	})
 	if err != nil {
-		return fmt.Errorf("failed to add share rule: %w", err)
+		return fmt.Errorf("failed to create share rule: %w", err)
 	}
-	log.Printf("Share (%s) Rule Added (total rules: %d)", a.shareID, len(updatedShare.Rules))
-
-	// Remove the rule we just added
-	if len(updatedShare.Rules) > 0 {
-		ruleID := updatedShare.Rules[len(updatedShare.Rules)-1].ID
-		updatedShare, err = a.vpsClient.Shares().RemoveRule(a.ctx, a.shareID, ruleID)
-		if err != nil {
-			return fmt.Errorf("failed to remove share rule: %w", err)
-		}
-		log.Printf("Share (%s) Rule Removed (remaining rules: %d)", a.shareID, len(updatedShare.Rules))
-	}
+	log.Printf("Share (%s) Rule Created (%s)", a.shareID, rule.ID)
 
 	return nil
 }

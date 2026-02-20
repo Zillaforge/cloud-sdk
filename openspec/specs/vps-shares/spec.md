@@ -9,11 +9,11 @@ Defines the SDK requirements for the VPS Share API — NFS/CIFS managed file sha
 ## Requirements
 
 ### Requirement: List shares
-The SDK SHALL provide a `List` method on `shares.Client` that returns all shares for a project, supporting optional filters.
+The SDK SHALL provide a `List` method on `shares.Client` that returns all shares for a project as `[]*ShareResource`, supporting optional filters.
 
 #### Scenario: List all shares
 - **WHEN** `List(ctx, nil)` is called
-- **THEN** the client SHALL issue `GET /api/v1/project/{project-id}/shares` and return a slice of `*Share`
+- **THEN** the client SHALL issue `GET /api/v1/project/{project-id}/shares` and return a slice of `*ShareResource`, each with `Rules()` wired
 
 #### Scenario: List shares with name filter
 - **WHEN** `List(ctx, &ListSharesOptions{Name: "my-share"})` is called
@@ -22,11 +22,11 @@ The SDK SHALL provide a `List` method on `shares.Client` that returns all shares
 ---
 
 ### Requirement: Get share
-The SDK SHALL provide a `Get` method that fetches a single share by ID.
+The SDK SHALL provide a `Get` method that fetches a single share by ID and returns it wrapped in a `ShareResource`.
 
 #### Scenario: Get existing share
 - **WHEN** `Get(ctx, shareID)` is called with a valid ID
-- **THEN** the client SHALL issue `GET /api/v1/project/{project-id}/shares/{share-id}` and return `*Share`
+- **THEN** the client SHALL issue `GET /api/v1/project/{project-id}/shares/{share-id}` and return `*ShareResource` with `Rules()` wired
 
 #### Scenario: Get non-existent share
 - **WHEN** `Get(ctx, shareID)` returns an HTTP error from the server
@@ -35,11 +35,11 @@ The SDK SHALL provide a `Get` method that fetches a single share by ID.
 ---
 
 ### Requirement: Create share
-The SDK SHALL provide a `Create` method that creates a new share.
+The SDK SHALL provide a `Create` method that creates a new share and returns it as a `ShareResource`.
 
 #### Scenario: Create share with required fields
 - **WHEN** `Create(ctx, req)` is called with `Name`, `NetworkID`, and `Size` set
-- **THEN** the client SHALL issue `POST /api/v1/project/{project-id}/shares` with the JSON body and return `*Share`
+- **THEN** the client SHALL issue `POST /api/v1/project/{project-id}/shares` with the JSON body and return `*ShareResource` with `Rules()` wired
 
 #### Scenario: Create share with missing required field
 - **WHEN** `Create(ctx, req)` is called without `Name`
@@ -75,28 +75,6 @@ The SDK SHALL provide an `Extend` method that increases a share's size.
 #### Scenario: Extend with invalid size
 - **WHEN** `Extend(ctx, shareID, req)` is called with `NewSize` <= 0
 - **THEN** the client SHALL return a validation error before making any HTTP call
-
----
-
-### Requirement: Add share access rule
-The SDK SHALL provide an `AddRule` method that creates an access rule on a share.
-
-#### Scenario: Add rule with required fields
-- **WHEN** `AddRule(ctx, shareID, req)` is called with `CIDR` and `Level` set
-- **THEN** the client SHALL issue `POST /api/v1/project/{project-id}/shares/{share-id}/rules` and return `*ShareRule`
-
-#### Scenario: Add rule with missing CIDR
-- **WHEN** `AddRule(ctx, shareID, req)` is called without `CIDR`
-- **THEN** the client SHALL return a validation error before making any HTTP call
-
----
-
-### Requirement: Remove share access rule
-The SDK SHALL provide a `RemoveRule` method that deletes an access rule from a share.
-
-#### Scenario: Remove rule
-- **WHEN** `RemoveRule(ctx, shareID, ruleID)` is called
-- **THEN** the client SHALL issue `DELETE /api/v1/project/{project-id}/shares/{share-id}/rules/{rule-id}` and return nil on success
 
 ---
 
