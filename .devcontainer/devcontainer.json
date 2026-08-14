@@ -5,66 +5,69 @@
 	"build": {
 		"dockerfile": "Dockerfile",
 		"args": {
-			// go version and arch
 			"GO_VER": "1.22.4",
-			"GO_ARCH": "alpine",
-			// install kubectl version
-			"INSTALL_KUBECTL": "false",
-			"KUBECTL_VER": "1.29.1",
-			// install kubebuilder version
-			"INSTALL_KUBEBUILDER": "false",
-			"KUBEBUILDER_VER": "3.10.0",
-			// install runtime for mcp
-			"INSTALL_DOCKER_CLI": "false",
-			"INSTALL_NODE": "false",
-			"INSTALL_PYTHON": "false",
 		}
 	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"golang.Go",
-				"GitHub.copilot",
 				"isudox.vscode-jetbrains-keybindings",
 				"Arjun.swagger-viewer",
 				"humao.rest-client",
+				"pjmiravalle.terraform-advanced-syntax-highlighting",
+				"arifum.bedrock-vscode-chat",
+				"openai.chatgpt",
+				"sst-dev.opencode",
+				"AndrewButson.vscode-openapi-viewer",
 			],
 			"settings": {
 				"terminal.integrated.defaultProfile.linux": "zsh",
 				"terminal.integrated.profiles.linux": {
 					"zsh": {
 						"path": "/bin/zsh"
-					}
-				},
-				"launch": {
-					"configurations": []
-				},
-				"mcp": {
-					// MCP server configurations example
-					"servers": {
-						// if you want to run MCP server in Python, python3 and uv are required.
-						// set INSTALL_PYTHON to true in devcontainer.json
-						// "timezone-uvx": {
-						// 	"command": "uvx",
-						// 	"args": [
-						// 		"mcp-server-time"
-						// 	]
-						// },
-						// if you want to run MCP server in Node.js, node.js and npm are required.
-						// set INSTALL_NODE to true in devcontainer.json
-						// "timezone-npx": {
-						// 	"command": "npx",
-						// 	"args": [
-						// 		"-y",
-						// 		"@cicatriz/timezone-toolkit"
-						// 	]
-						// }
-					}
+					}				
 				}
 			}
 		}
 	},
-	"runArgs": [],
-	"mounts": [],
-	"initializeCommand": ""
+	"features": {
+		// Install Coding Agent, Claude Code, OpenCode, Codex, and Gemini
+		"ghcr.io/anthropics/devcontainer-features/claude-code:1": {},
+		"ghcr.io/stu-bell/devcontainer-features/open-code:0": {},
+        "ghcr.io/dirien/devcontainer-feature-codex/codex:0": {},
+		"ghcr.io/cirolosapio/devcontainers-features/alpine-node:0.0.16": {
+			"globalPackages": "@fission-ai/openspec@latest"
+		},
+		"ghcr.io/MuhmdRaouf/devcontainers-features/alpine-apk:0": {
+			"packages": "make,ripgrep,bubblewrap,python3,py3-pip,zsh-vcs,tmux,less",
+		}		
+		// Access host Docker inside Devcontainer
+		// "ghcr.io/cirolosapio/devcontainers-features/alpine-docker-outside-of-docker:0": {},
+	},	
+	"containerEnv": {
+		"WORKSPACE_FOLDER": "${containerWorkspaceFolder}",
+		//
+		"PAGER": "less -FRX",
+		"GIT_PAGER": "less -FRX",
+		"LESS": "FRX",
+		// Code Agent Configuration
+		"CLAUDE_CODE_USE_BEDROCK": "1",
+		"CLAUDE_CODE_MAX_OUTPUT_TOKENS": "64000",
+		"AWS_BEARER_TOKEN_BEDROCK": "${localEnv:AWS_BEARER_TOKEN_BEDROCK}",
+		"AZURE_COGNITIVE_SERVICES_RESOURCE_NAME": "${localEnv:AZURE_COGNITIVE_SERVICES_RESOURCE_NAME}",	
+		"AZURE_OPENAI_API_KEY": "${localEnv:AZURE_OPENAI_API_KEY}",
+	},	
+	"mounts": [
+		"source=opencode_setting,target=/root/.local,type=volume",
+		"source=claude_setting,target=/root/.claude_setting,type=volume",
+		"source=codex_setting,target=/root/.codex,type=volume",
+		"source=vscocde-golang-devcontainer,target=/go,type=volume",
+	],
+	"initializeCommand": "sh .devcontainer/initializeCommand.sh",
+	"postCreateCommand": "sh .devcontainer/postCreateCommand.sh",
+	"postStartCommand": "sh .devcontainer/postStartCommand.sh",
+ 	"runArgs": [
+    	"--security-opt=seccomp=unconfined"
+  	],	
 }
