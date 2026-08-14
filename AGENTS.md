@@ -8,7 +8,7 @@
 - `internal/`: private utilities (`internal/http`, `internal/backoff`, `internal/types`, `internal/waiter`).
 - `docs/`: service docs and examples.
 - `swagger/`: OpenAPI specs.
-- `specs/`: design docs and checklists (excluded from build/test/lint).
+- `openspec/specs/`: canonical capability specifications and migrated spec-kit source snapshots.
 - `hack/`: REST examples and ad hoc scripts.
 - Tests live alongside code as `*_test.go` (including module/model tests).
 

@@ -117,7 +117,7 @@ go test ./...
 | `install-tools` | Install dev tools (goimports, golangci-lint) |
 | `check` | Run fmt + lint + test |
 
-**Note**: The specs directory is excluded from build/test/lint operations as it contains documentation files.
+**Note**: The `openspec/` directory contains documentation and specifications and is excluded from build/test/lint operations.
 
 ### Linting
 
@@ -135,6 +135,10 @@ make lint
 # Format code
 make fmt
 ```
+
+### Specifications
+
+Canonical capability specifications are maintained under `openspec/specs/` and changes are planned under `openspec/changes/`. Each capability retains the complete migrated spec-kit source under `source/`; see [`docs/spec-kit-openspec-migration.md`](docs/spec-kit-openspec-migration.md) for the mapping.
 
 ## Project Structure
 
