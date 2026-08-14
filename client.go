@@ -21,10 +21,11 @@ type Logger = types.Logger
 // Client is the main entry point for the Cloud SDK.
 // It manages authentication, base URL, and HTTP client configuration.
 type Client struct {
-	baseURL    string
-	token      string
-	httpClient *http.Client
-	logger     Logger
+	baseURL     string
+	identityURL string
+	token       string
+	httpClient  *http.Client
+	logger      Logger
 }
 
 // ClientOption is a functional option for configuring the Client.
@@ -55,35 +56,54 @@ func WithHTTPClient(httpClient *http.Client) ClientOption {
 // baseURL must be a valid URL with scheme (e.g., "https://api.example.com").
 // token must be a non-empty bearer token for authentication.
 func New(baseURL, token string, opts ...ClientOption) (*Client, error) {
-	// Validate base URL
-	parsedURL, err := url.Parse(baseURL)
-	if err != nil {
-		return nil, fmt.Errorf("invalid base URL: %w", err)
-	}
-	if parsedURL.Scheme == "" {
-		return nil, fmt.Errorf("base URL must include scheme (e.g., https://)")
-	}
+	return newClient(baseURL, "", token, opts...)
+}
 
-	// Validate token
+// NewWithIdentityURL creates a new Cloud SDK client with a dedicated IAM endpoint.
+// baseURL and identityURL must be valid URLs with schemes.
+// token must be a non-empty bearer token for authentication.
+func NewWithIdentityURL(baseURL, identityURL, token string, opts ...ClientOption) (*Client, error) {
+	return newClient(baseURL, identityURL, token, opts...)
+}
+
+func newClient(baseURL, identityURL, token string, opts ...ClientOption) (*Client, error) {
+	if err := validateURL(baseURL, "base"); err != nil {
+		return nil, err
+	}
+	if identityURL != "" {
+		if err := validateURL(identityURL, "identity"); err != nil {
+			return nil, err
+		}
+	}
 	if token == "" {
 		return nil, fmt.Errorf("token cannot be empty")
 	}
 
-	// Create client with defaults
 	client := &Client{
-		baseURL: baseURL,
-		token:   token,
+		baseURL:     baseURL,
+		identityURL: identityURL,
+		token:       token,
 		httpClient: &http.Client{
 			Timeout: 30 * time.Second, // Default 30s timeout
 		},
 	}
-
-	// Apply options
 	for _, opt := range opts {
 		opt(client)
 	}
 
 	return client, nil
+}
+
+func validateURL(rawURL, name string) error {
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return fmt.Errorf("invalid %s URL: %w", name, err)
+	}
+	if parsedURL.Scheme == "" {
+		return fmt.Errorf("%s URL must include scheme (e.g., https://)", name)
+	}
+
+	return nil
 }
 
 // NewClient is a convenience function that creates a new client without error handling.
@@ -167,8 +187,12 @@ func (pc *ProjectClient) VRM() *vrm.Client {
 // IAM returns a non-project-scoped IAM service client.
 // IAM operations are global to the authenticated user and don't require a project context.
 func (c *Client) IAM() *iam.Client {
-	// Append /iam to baseURL for IAM service endpoints
-	iamBaseURL := c.baseURL + "/iam"
+	iamURL := c.baseURL
+	if c.identityURL != "" {
+		iamURL = c.identityURL
+	}
+	// Append /iam to the selected endpoint for IAM service requests.
+	iamBaseURL := iamURL + "/iam"
 
 	// Create internal HTTP client with retry and error handling
 	baseClient := internalhttp.NewClient(iamBaseURL, c.token, c.httpClient, c.logger)

@@ -33,6 +33,127 @@ func TestClient_IAM(t *testing.T) {
 	}
 }
 
+func TestNewWithIdentityURL(t *testing.T) {
+	logger := &mockLogger{}
+	httpClient := &http.Client{Timeout: 45 * time.Second}
+	client, err := NewWithIdentityURL(
+		"https://api.example.com",
+		"https://identity.example.com",
+		"test-token",
+		WithLogger(logger),
+		WithHTTPClient(httpClient),
+	)
+	if err != nil {
+		t.Fatalf("NewWithIdentityURL() failed: %v", err)
+	}
+	if client.baseURL != "https://api.example.com" {
+		t.Errorf("expected baseURL %q, got %q", "https://api.example.com", client.baseURL)
+	}
+	if client.identityURL != "https://identity.example.com" {
+		t.Errorf("expected identityURL %q, got %q", "https://identity.example.com", client.identityURL)
+	}
+	if client.httpClient != httpClient {
+		t.Error("expected custom HTTP client to be preserved")
+	}
+	if client.logger != logger {
+		t.Error("expected custom logger to be preserved")
+	}
+
+	for _, identityURL := range []string{"identity.example.com", "ht!tp://invalid"} {
+		if _, err := NewWithIdentityURL("https://api.example.com", identityURL, "test-token"); err == nil {
+			t.Errorf("expected error for identity URL %q", identityURL)
+		}
+	}
+}
+
+func TestClient_IdentityURLRouting(t *testing.T) {
+	identityServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/iam/api/v1/user":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"userId": "user-123"})
+		case "/iam/api/v1/project/proj-123":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"projectId": "proj-123"})
+		case "/iam/api/v1/project/missing":
+			w.WriteHeader(http.StatusNotFound)
+		case "/iam/api/v1/projects":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"projects": []map[string]interface{}{{
+					"project": map[string]interface{}{
+						"projectId": "proj-456",
+						"extra":     map[string]interface{}{"iservice": map[string]interface{}{"projectSysCode": "PROJECT-CODE"}},
+					},
+				}},
+			})
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer identityServer.Close()
+
+	baseServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		switch r.URL.Path {
+		case "/vps/api/v1/project/proj-123/networks":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"networks": []interface{}{}})
+		case "/vrm/api/v1/project/proj-123/repositories":
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{"repositories": []interface{}{}})
+		default:
+			t.Errorf("unexpected request to base endpoint: %s", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer baseServer.Close()
+
+	client, err := NewWithIdentityURL(baseServer.URL, identityServer.URL, "test-token")
+	if err != nil {
+		t.Fatalf("NewWithIdentityURL() failed: %v", err)
+	}
+	if _, err := client.IAM().Users().Get(context.Background()); err != nil {
+		t.Fatalf("IAM user request failed: %v", err)
+	}
+
+	projectClient, err := client.Project(context.Background(), "proj-123")
+	if err != nil {
+		t.Fatalf("Project() by ID failed: %v", err)
+	}
+	if _, err := projectClient.VPS().Networks().List(context.Background(), nil); err != nil {
+		t.Fatalf("VPS request failed: %v", err)
+	}
+	if _, err := projectClient.VRM().Repositories().List(context.Background(), nil); err != nil {
+		t.Fatalf("VRM request failed: %v", err)
+	}
+
+	projectClient, err = client.Project(context.Background(), "PROJECT-CODE")
+	if err != nil {
+		t.Fatalf("Project() by code failed: %v", err)
+	}
+	if projectClient.projectID != "proj-456" {
+		t.Errorf("expected resolved project ID %q, got %q", "proj-456", projectClient.projectID)
+	}
+}
+
+func TestClient_IAMUsesBaseURLByDefault(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/iam/api/v1/user" {
+			t.Errorf("expected legacy IAM path %q, got %q", "/iam/api/v1/user", r.URL.Path)
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{"userId": "user-123"})
+	}))
+	defer server.Close()
+
+	client, err := New(server.URL, "test-token")
+	if err != nil {
+		t.Fatalf("New() failed: %v", err)
+	}
+	if _, err := client.IAM().Users().Get(context.Background()); err != nil {
+		t.Fatalf("legacy IAM request failed: %v", err)
+	}
+}
+
 // TestNew tests the New function with various scenarios
 func TestNew(t *testing.T) {
 	tests := []struct {

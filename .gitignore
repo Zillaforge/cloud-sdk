@@ -31,3 +31,5 @@ coverage.html
 
 # Dependencies
 go.sum
+.spectra/
+openspec/.vector-search.db*
